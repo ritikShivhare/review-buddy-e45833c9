@@ -5,23 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Star, Download } from "lucide-react";
-
-const mockReviews = [
-  { id: "1", customer: "Priya Sharma", rating: 5, route: "google", comment: "Excellent service!", date: "Mar 20, 2026" },
-  { id: "2", customer: "Rahul Verma", rating: 2, route: "manager", comment: "Food was cold", date: "Mar 20, 2026" },
-  { id: "3", customer: "Anita Desai", rating: 4, route: "google", comment: "Very nice ambiance", date: "Mar 19, 2026" },
-  { id: "4", customer: "Vikram Singh", rating: 1, route: "manager", comment: "Terrible wait time", date: "Mar 19, 2026" },
-  { id: "5", customer: "Meera Patel", rating: 5, route: "google", comment: "Best biryani in town!", date: "Mar 18, 2026" },
-  { id: "6", customer: "Suresh Kumar", rating: 3, route: "apology", comment: "Average experience", date: "Mar 18, 2026" },
-  { id: "7", customer: "Deepa Nair", rating: 4, route: "google", comment: "Good food, friendly staff", date: "Mar 17, 2026" },
-  { id: "8", customer: "Amit Joshi", rating: 2, route: "manager", comment: "Overpriced for quality", date: "Mar 17, 2026" },
-];
-
-const routeMap: Record<string, { label: string; variant: "default" | "destructive" | "secondary" }> = {
-  google: { label: "Google", variant: "default" },
-  manager: { label: "Complaint", variant: "destructive" },
-  apology: { label: "Apology", variant: "secondary" },
-};
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useBusiness } from "@/hooks/useBusiness";
+import { useSubscription, isPaidPlan } from "@/hooks/useSubscription";
+import { toast } from "sonner";
 
 function StarsDisplay({ rating }: { rating: number }) {
   return (
@@ -33,25 +21,73 @@ function StarsDisplay({ rating }: { rating: number }) {
   );
 }
 
-const ReviewsPage = () => {
-  const [ratingFilter, setRatingFilter] = useState("all");
-  const [routeFilter, setRouteFilter] = useState("all");
+const routeMap: Record<string, { label: string; variant: "default" | "destructive" | "secondary" }> = {
+  whatsapp: { label: "WhatsApp", variant: "default" },
+  sms: { label: "SMS", variant: "secondary" },
+  qr: { label: "QR", variant: "secondary" },
+  manual: { label: "Manual", variant: "secondary" },
+};
 
-  const filtered = mockReviews.filter((r) => {
+const ReviewsPage = () => {
+  const { data: business } = useBusiness();
+  const { data: subscription } = useSubscription();
+  const [ratingFilter, setRatingFilter] = useState("all");
+
+  const { data: reviews = [], isLoading } = useQuery({
+    queryKey: ["reviews", business?.id],
+    queryFn: async () => {
+      if (!business) return [];
+      const { data, error } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("business_id", business.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!business,
+  });
+
+  // Subscribe to realtime updates
+  const filtered = reviews.filter((r) => {
     if (ratingFilter !== "all" && r.rating !== Number(ratingFilter)) return false;
-    if (routeFilter !== "all" && r.route !== routeFilter) return false;
     return true;
   });
+
+  const handleExportCSV = () => {
+    if (!isPaidPlan(subscription?.plan)) {
+      toast.error("CSV export is available on Starter plan and above");
+      return;
+    }
+    const headers = ["Customer", "Rating", "Source", "Google Redirect", "Date"];
+    const rows = reviews.map((r) => [
+      r.customer_name,
+      r.rating,
+      r.source || "whatsapp",
+      r.redirected_to_google ? "Yes" : "No",
+      new Date(r.created_at).toLocaleDateString("en-IN"),
+    ]);
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reviews-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exported");
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Reviews</h1>
-          <p className="text-sm text-muted-foreground">{mockReviews.length} total reviews</p>
+          <p className="text-sm text-muted-foreground">{reviews.length} total reviews</p>
         </div>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" onClick={handleExportCSV}>
           <Download className="mr-1.5 h-4 w-4" /> Export CSV
+          {!isPaidPlan(subscription?.plan) && <Badge variant="secondary" className="ml-2 text-[10px]">Pro</Badge>}
         </Button>
       </div>
 
@@ -65,44 +101,43 @@ const ReviewsPage = () => {
             ))}
           </SelectContent>
         </Select>
-        <Select value={routeFilter} onValueChange={setRouteFilter}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="Route" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All routes</SelectItem>
-            <SelectItem value="google">Google</SelectItem>
-            <SelectItem value="manager">Complaint</SelectItem>
-            <SelectItem value="apology">Apology</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       <Card className="shadow-sm">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Route</TableHead>
-                <TableHead className="hidden sm:table-cell">Comment</TableHead>
-                <TableHead>Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((r) => {
-                const badge = routeMap[r.route];
-                return (
-                  <TableRow key={r.id} className="hover:bg-muted/40">
-                    <TableCell className="font-medium text-foreground">{r.customer}</TableCell>
-                    <TableCell><StarsDisplay rating={r.rating} /></TableCell>
-                    <TableCell><Badge variant={badge.variant} className="text-xs">{badge.label}</Badge></TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground max-w-[200px] truncate">{r.comment}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground tabular-nums">{r.date}</TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          {isLoading ? (
+            <div className="flex justify-center py-12"><div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">No reviews yet. Add customers and collect ratings!</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Rating</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Google</TableHead>
+                  <TableHead>Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((r) => {
+                  const badge = routeMap[r.source || "whatsapp"] || routeMap.whatsapp;
+                  return (
+                    <TableRow key={r.id} className="hover:bg-muted/40">
+                      <TableCell className="font-medium text-foreground">{r.customer_name}</TableCell>
+                      <TableCell><StarsDisplay rating={r.rating} /></TableCell>
+                      <TableCell><Badge variant={badge.variant} className="text-xs">{badge.label}</Badge></TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{r.redirected_to_google ? "✅" : "—"}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground tabular-nums">
+                        {new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
