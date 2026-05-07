@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Save, QrCode, Download } from "lucide-react";
+import { useBusiness, useUpdateBusiness } from "@/hooks/useBusiness";
+import { QRCodeSVG } from "qrcode.react";
 
 const defaultTemplates = {
   request: `Hello {customer_name}! 👋\n\nThank you for visiting {business_name}!\n\nWe'd love to hear about your experience.\nHow would you rate us?\n\nReply with a number:\n1 ⭐ - Very Poor\n2 ⭐⭐ - Poor\n3 ⭐⭐⭐ - Average\n4 ⭐⭐⭐⭐ - Good\n5 ⭐⭐⭐⭐⭐ - Excellent!`,
@@ -16,7 +18,64 @@ const defaultTemplates = {
 };
 
 const SettingsPage = () => {
+  const { data: business, isLoading } = useBusiness();
+  const updateBusiness = useUpdateBusiness();
   const [templates, setTemplates] = useState(defaultTemplates);
+
+  const [form, setForm] = useState({
+    business_name: "",
+    manager_phone: "",
+    google_review_url: "",
+    address: "",
+    apology_offer: "",
+  });
+
+  useEffect(() => {
+    if (business) {
+      setForm({
+        business_name: business.business_name || "",
+        manager_phone: business.manager_phone || "",
+        google_review_url: business.google_review_url || "",
+        address: business.address || "",
+        apology_offer: business.apology_offer || "15% off your next visit",
+      });
+    }
+  }, [business]);
+
+  const handleSaveSettings = async () => {
+    try {
+      await updateBusiness.mutateAsync(form);
+      toast.success("Settings saved");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save settings");
+    }
+  };
+
+  const qrUrl = business ? `${window.location.origin}/r/${business.id}` : "";
+
+  const handleDownloadQR = () => {
+    const svg = document.getElementById("qr-code-svg");
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    img.onload = () => {
+      ctx?.drawImage(img, 0, 0, 512, 512);
+      const pngUrl = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = pngUrl;
+      a.download = `reviewflow-qr-${business?.business_name?.replace(/\s+/g, "-").toLowerCase() || "code"}.png`;
+      a.click();
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(svgData);
+  };
+
+  if (isLoading) {
+    return <div className="flex justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -39,27 +98,27 @@ const SettingsPage = () => {
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Business Name</Label>
-                  <Input defaultValue="Spice Garden Restaurant" />
+                  <Input value={form.business_name} onChange={(e) => setForm({ ...form, business_name: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Manager Phone (WhatsApp)</Label>
-                  <Input defaultValue="+91 98765 43210" />
+                  <Input value={form.manager_phone} onChange={(e) => setForm({ ...form, manager_phone: e.target.value })} />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Google Review URL</Label>
-                  <Input defaultValue="https://g.page/r/spicegarden/review" />
+                  <Input value={form.google_review_url} onChange={(e) => setForm({ ...form, google_review_url: e.target.value })} />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Business Address</Label>
-                  <Input defaultValue="42 MG Road, Bangalore 560001" />
+                  <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Apology Offer</Label>
-                  <Input defaultValue="15% off your next visit" />
+                  <Input value={form.apology_offer} onChange={(e) => setForm({ ...form, apology_offer: e.target.value })} />
                 </div>
               </div>
-              <Button onClick={() => toast.success("Settings saved")}>
-                <Save className="mr-1.5 h-4 w-4" /> Save Changes
+              <Button onClick={handleSaveSettings} disabled={updateBusiness.isPending}>
+                <Save className="mr-1.5 h-4 w-4" /> {updateBusiness.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </CardContent>
           </Card>
@@ -94,17 +153,23 @@ const SettingsPage = () => {
         <TabsContent value="qr">
           <Card className="shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30">
-                <QrCode className="h-24 w-24 text-muted-foreground/40" />
-              </div>
+              {qrUrl ? (
+                <div className="mx-auto inline-block rounded-xl border-2 border-border bg-background p-4">
+                  <QRCodeSVG id="qr-code-svg" value={qrUrl} size={192} level="H" />
+                </div>
+              ) : (
+                <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30">
+                  <QrCode className="h-24 w-24 text-muted-foreground/40" />
+                </div>
+              )}
               <p className="mt-4 text-sm text-muted-foreground">
-                Generate a QR code that customers can scan to rate your business
+                Customers scan this QR code to leave a review or file a complaint
               </p>
+              {qrUrl && (
+                <p className="mt-2 text-xs text-muted-foreground font-mono break-all">{qrUrl}</p>
+              )}
               <div className="mt-4 flex justify-center gap-3">
-                <Button onClick={() => toast.info("QR code generated!")}>
-                  <QrCode className="mr-1.5 h-4 w-4" /> Generate QR Code
-                </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={handleDownloadQR} disabled={!qrUrl}>
                   <Download className="mr-1.5 h-4 w-4" /> Download PNG
                 </Button>
               </div>
