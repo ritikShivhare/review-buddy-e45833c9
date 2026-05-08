@@ -16,8 +16,8 @@ import { BarChart3, Users, Star, AlertTriangle, Settings, LogOut } from "lucide-
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/hooks/useBusiness";
-import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
@@ -33,6 +33,8 @@ function AppSidebar() {
   const collapsed = state === "collapsed";
   const { data: business } = useBusiness();
 
+  const queryClient = useQueryClient();
+
   const { data: openComplaints } = useQuery({
     queryKey: ["complaints-count", business?.id],
     queryFn: async () => {
@@ -46,6 +48,22 @@ function AppSidebar() {
     },
     enabled: !!business,
   });
+
+  useEffect(() => {
+    if (!business) return;
+    const channel = supabase
+      .channel("complaints-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "complaints", filter: `business_id=eq.${business.id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["complaints-count", business.id] });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [business, queryClient]);
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
