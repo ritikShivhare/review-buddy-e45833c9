@@ -69,6 +69,15 @@ function AnimatedSection({ children, className = "", delay = 0 }: { children: Re
 }
 
 const LandingPage = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [loading, user, navigate]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
