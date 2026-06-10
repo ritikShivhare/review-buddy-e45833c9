@@ -309,7 +309,32 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* FAQ */}
+      <section id="faq" className="py-20 lg:py-28 bg-secondary/40">
+        <div className="container max-w-3xl">
+          <AnimatedSection className="text-center">
+            <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Frequently asked questions</h2>
+            <p className="mt-3 text-muted-foreground">Everything you need to know about ReviewFlow</p>
+          </AnimatedSection>
+          <AnimatedSection delay={120}>
+            <Accordion type="single" collapsible className="mt-10 w-full">
+              {faqs.map((f, i) => (
+                <AccordionItem key={f.q} value={`item-${i}`}>
+                  <AccordionTrigger className="text-left text-base font-semibold text-foreground">
+                    {f.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground leading-relaxed">
+                    {f.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </AnimatedSection>
+        </div>
+      </section>
+
       {/* CTA */}
+
       <section className="py-20 bg-primary">
         <div className="container text-center">
           <AnimatedSection>
