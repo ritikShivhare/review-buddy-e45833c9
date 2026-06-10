@@ -228,6 +228,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      file_complaint: {
+        Args: {
+          _business_id: string
+          _complaint_text?: string
+          _customer_name?: string
+          _customer_phone?: string
+        }
+        Returns: string
+      }
       get_complaint_destination: {
         Args: { _business_id: string }
         Returns: {
