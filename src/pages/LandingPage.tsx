@@ -82,7 +82,7 @@ const plans = [
   },
   {
     name: "Growth",
-    price: "₹2,499",
+    price: "₹1,499",
     period: "/month",
     features: [
       "Unlimited requests",
