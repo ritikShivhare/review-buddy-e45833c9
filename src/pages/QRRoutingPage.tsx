@@ -13,13 +13,11 @@ const QRRoutingPage = () => {
 
   useEffect(() => {
     if (!businessId) return;
-    // Public read - we need a policy for this. For now we use the ID directly.
-    // In production this would be a public-facing edge function.
     const fetchBusiness = async () => {
+      // Only fetches safe public fields (name, google review URL) via a security-definer RPC.
+      // Manager phone is NOT exposed publicly — it's fetched on demand when filing a complaint.
       const { data, error } = await supabase
-        .from("businesses")
-        .select("business_name, google_review_url, manager_phone")
-        .eq("id", businessId)
+        .rpc("get_public_business", { _business_id: businessId })
         .maybeSingle();
       if (error || !data) {
         setError("Business not found");
@@ -30,6 +28,23 @@ const QRRoutingPage = () => {
     };
     fetchBusiness();
   }, [businessId]);
+
+  const handleComplaint = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!businessId) return;
+    const { data } = await supabase
+      .rpc("get_complaint_destination", { _business_id: businessId })
+      .maybeSingle();
+    if (!data?.manager_phone) {
+      setError("Unable to start complaint chat");
+      return;
+    }
+    const phone = data.manager_phone.replace(/[\s+\-()]/g, "");
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(
+      `Hi ${data.business_name}, I have a complaint regarding your service. [Briefly describe your issue here].`
+    )}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   if (loading) {
     return (
@@ -52,7 +67,6 @@ const QRRoutingPage = () => {
     );
   }
 
-  const whatsappUrl = `https://wa.me/${business.manager_phone?.replace(/[\s+\-()]/g, "")}?text=${encodeURIComponent(`Hi ${business.business_name}, I have a complaint regarding your service. [Briefly describe your issue here].`)}`;
   const googleUrl = business.google_review_url || "#";
 
   return (
@@ -84,7 +98,7 @@ const QRRoutingPage = () => {
 
           <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-destructive/20">
             <CardContent className="p-0">
-              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-6">
+              <a href="#" onClick={handleComplaint} className="flex items-center gap-4 p-6">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
                   <MessageSquare className="h-6 w-6 text-destructive" />
                 </div>

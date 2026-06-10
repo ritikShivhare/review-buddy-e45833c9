@@ -59,15 +59,21 @@ const ReviewsPage = () => {
       toast.error("CSV export is available on Starter plan and above");
       return;
     }
+    const escape = (v: unknown) => {
+      const s = String(v ?? "");
+      const safe = s.replace(/"/g, '""');
+      // Prevent CSV formula injection in Excel/LibreOffice
+      return /^[=+\-@\t\r]/.test(safe) ? `"'${safe}"` : `"${safe}"`;
+    };
     const headers = ["Customer", "Rating", "Source", "Google Redirect", "Date"];
     const rows = reviews.map((r) => [
-      r.customer_name,
-      r.rating,
-      r.source || "whatsapp",
-      r.redirected_to_google ? "Yes" : "No",
-      new Date(r.created_at).toLocaleDateString("en-IN"),
+      escape(r.customer_name),
+      escape(r.rating),
+      escape(r.source || "whatsapp"),
+      escape(r.redirected_to_google ? "Yes" : "No"),
+      escape(new Date(r.created_at).toLocaleDateString("en-IN")),
     ]);
-    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const csv = [headers.map(escape).join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
