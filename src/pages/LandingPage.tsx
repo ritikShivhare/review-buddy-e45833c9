@@ -1,9 +1,49 @@
 import { useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useNavigate } from "react-router-dom";
 import { Star, MessageSquare, ArrowRight, BarChart3, Shield, Zap, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+
+const faqs = [
+  {
+    q: "Is ReviewFlow compliant with Google's review policies?",
+    a: "Yes. ReviewFlow never incentivizes or filters reviews — we simply make it easier for satisfied customers to share genuine feedback on Google. Unhappy customers are routed to a private channel so you can resolve issues, which is fully aligned with Google's review guidelines.",
+  },
+  {
+    q: "How does the WhatsApp integration work?",
+    a: "We use the official WhatsApp Business API via Twilio. After you add a customer, ReviewFlow sends them a short message asking for a 1–5 star rating. Based on their reply, they're routed to your Google Review page or a private complaint form.",
+  },
+  {
+    q: "Can I use ReviewFlow for multiple business locations?",
+    a: "Absolutely. Our Growth plan supports unlimited locations with separate dashboards, QR codes, and team members for each branch.",
+  },
+  {
+    q: "Do my customers need to install anything?",
+    a: "No. Customers receive a normal WhatsApp message and tap a link — no app installs, no logins, no friction. It works on any smartphone in India.",
+  },
+  {
+    q: "What happens during the 14-day free trial?",
+    a: "You get 50 review requests, the full dashboard, and WhatsApp messaging for one business location. No credit card required, and you can upgrade or cancel anytime.",
+  },
+  {
+    q: "Can I import my existing customer list?",
+    a: "Yes. You can upload a CSV of customer names and phone numbers, and ReviewFlow will queue up review requests automatically.",
+  },
+];
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+
 
 const steps = [
   {
@@ -80,7 +120,23 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Nav */}
+      <Helmet>
+        <title>ReviewFlow: Automated WhatsApp Google Review Management for Indian Businesses</title>
+        <meta
+          name="description"
+          content="ReviewFlow helps Indian businesses collect more Google reviews automatically via WhatsApp. Route happy customers to Google, resolve complaints privately. Start free."
+        />
+        <link rel="canonical" href="https://local-loyalty.lovable.app/" />
+        <meta property="og:title" content="ReviewFlow — Automated WhatsApp Google Review Management" />
+        <meta
+          property="og:description"
+          content="Turn every customer into a Google review. Automated WhatsApp review collection built for Indian businesses."
+        />
+        <meta property="og:url" content="https://local-loyalty.lovable.app/" />
+        <meta property="og:type" content="website" />
+        <script type="application/ld+json">{JSON.stringify(faqJsonLd)}</script>
+      </Helmet>
+
       <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
@@ -253,7 +309,32 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* FAQ */}
+      <section id="faq" className="py-20 lg:py-28 bg-secondary/40">
+        <div className="container max-w-3xl">
+          <AnimatedSection className="text-center">
+            <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Frequently asked questions</h2>
+            <p className="mt-3 text-muted-foreground">Everything you need to know about ReviewFlow</p>
+          </AnimatedSection>
+          <AnimatedSection delay={120}>
+            <Accordion type="single" collapsible className="mt-10 w-full">
+              {faqs.map((f, i) => (
+                <AccordionItem key={f.q} value={`item-${i}`}>
+                  <AccordionTrigger className="text-left text-base font-semibold text-foreground">
+                    {f.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground leading-relaxed">
+                    {f.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </AnimatedSection>
+        </div>
+      </section>
+
       {/* CTA */}
+
       <section className="py-20 bg-primary">
         <div className="container text-center">
           <AnimatedSection>
