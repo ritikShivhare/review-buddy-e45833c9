@@ -13,13 +13,11 @@ const QRRoutingPage = () => {
 
   useEffect(() => {
     if (!businessId) return;
-    // Public read - we need a policy for this. For now we use the ID directly.
-    // In production this would be a public-facing edge function.
     const fetchBusiness = async () => {
+      // Only fetches safe public fields (name, google review URL) via a security-definer RPC.
+      // Manager phone is NOT exposed publicly — it's fetched on demand when filing a complaint.
       const { data, error } = await supabase
-        .from("businesses")
-        .select("business_name, google_review_url, manager_phone")
-        .eq("id", businessId)
+        .rpc("get_public_business", { _business_id: businessId })
         .maybeSingle();
       if (error || !data) {
         setError("Business not found");
@@ -30,6 +28,23 @@ const QRRoutingPage = () => {
     };
     fetchBusiness();
   }, [businessId]);
+
+  const handleComplaint = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!businessId) return;
+    const { data } = await supabase
+      .rpc("get_complaint_destination", { _business_id: businessId })
+      .maybeSingle();
+    if (!data?.manager_phone) {
+      setError("Unable to start complaint chat");
+      return;
+    }
+    const phone = data.manager_phone.replace(/[\s+\-()]/g, "");
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(
+      `Hi ${data.business_name}, I have a complaint regarding your service. [Briefly describe your issue here].`
+    )}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   if (loading) {
     return (
