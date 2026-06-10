@@ -120,7 +120,23 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Nav */}
+      <Helmet>
+        <title>ReviewFlow: Automated WhatsApp Google Review Management for Indian Businesses</title>
+        <meta
+          name="description"
+          content="ReviewFlow helps Indian businesses collect more Google reviews automatically via WhatsApp. Route happy customers to Google, resolve complaints privately. Start free."
+        />
+        <link rel="canonical" href="https://local-loyalty.lovable.app/" />
+        <meta property="og:title" content="ReviewFlow — Automated WhatsApp Google Review Management" />
+        <meta
+          property="og:description"
+          content="Turn every customer into a Google review. Automated WhatsApp review collection built for Indian businesses."
+        />
+        <meta property="og:url" content="https://local-loyalty.lovable.app/" />
+        <meta property="og:type" content="website" />
+        <script type="application/ld+json">{JSON.stringify(faqJsonLd)}</script>
+      </Helmet>
+
       <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
