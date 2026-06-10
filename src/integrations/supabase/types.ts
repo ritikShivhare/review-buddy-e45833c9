@@ -228,7 +228,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_complaint_destination: {
+        Args: { _business_id: string }
+        Returns: {
+          business_name: string
+          manager_phone: string
+        }[]
+      }
+      get_public_business: {
+        Args: { _business_id: string }
+        Returns: {
+          business_name: string
+          google_review_url: string
+          id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
