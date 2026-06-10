@@ -67,7 +67,6 @@ const QRRoutingPage = () => {
     );
   }
 
-  const whatsappUrl = `https://wa.me/${business.manager_phone?.replace(/[\s+\-()]/g, "")}?text=${encodeURIComponent(`Hi ${business.business_name}, I have a complaint regarding your service. [Briefly describe your issue here].`)}`;
   const googleUrl = business.google_review_url || "#";
 
   return (
