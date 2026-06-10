@@ -152,10 +152,11 @@ const CustomersPage = () => {
                       {new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => sendRequest.mutate(c)} disabled={sendRequest.isPending}>
                         <Send className="mr-1.5 h-3.5 w-3.5" /> Request
                       </Button>
                     </TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>
