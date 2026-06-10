@@ -39,12 +39,18 @@ const QRRoutingPage = () => {
       setError("Unable to start complaint chat");
       return;
     }
+    // Record the complaint so it shows in the owner's dashboard in real-time.
+    await supabase.rpc("file_complaint", {
+      _business_id: businessId,
+      _complaint_text: "Complaint filed via QR — details sent on WhatsApp",
+    });
     const phone = data.manager_phone.replace(/[\s+\-()]/g, "");
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(
       `Hi ${data.business_name}, I have a complaint regarding your service. [Briefly describe your issue here].`
     )}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
+
 
   if (loading) {
     return (

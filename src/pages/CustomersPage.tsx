@@ -55,9 +55,32 @@ const CustomersPage = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
+  const sendRequest = useMutation({
+    mutationFn: async (customer: { id: string; name: string; phone: string }) => {
+      if (!business) throw new Error("No business");
+      let phone = customer.phone.replace(/[\s+\-()]/g, "");
+      if (phone.length === 10) phone = "91" + phone;
+      const link = `${window.location.origin}/r/${business.id}`;
+      const msg = `Hi ${customer.name}, thanks for visiting ${business.business_name}! We'd love your feedback: ${link}`;
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+      window.open(url, "_blank", "noopener,noreferrer");
+      const { error } = await supabase
+        .from("customers")
+        .update({ status: "requested" })
+        .eq("id", customer.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast.success("Review request sent");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
   const filtered = customers.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
   );
+
 
   return (
     <div className="space-y-6">
@@ -129,10 +152,11 @@ const CustomersPage = () => {
                       {new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => sendRequest.mutate(c)} disabled={sendRequest.isPending}>
                         <Send className="mr-1.5 h-3.5 w-3.5" /> Request
                       </Button>
                     </TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>
