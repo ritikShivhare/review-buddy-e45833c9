@@ -34,7 +34,7 @@ const plans = [
   },
   {
     name: "Starter",
-    price: "₹999",
+    price: "₹499",
     period: "/month",
     features: ["500 review requests/mo", "Full dashboard & analytics", "CSV import", "Priority support", "Custom templates"],
     cta: "Get Started",
