@@ -37,7 +37,7 @@ const ComplaintsPage = () => {
   useEffect(() => {
     if (!business) return;
     const channel = supabase
-      .channel("complaints-realtime")
+      .channel(`complaints-page-${business.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "complaints", filter: `business_id=eq.${business.id}` }, () => {
         queryClient.invalidateQueries({ queryKey: ["complaints", business.id] });
       })
