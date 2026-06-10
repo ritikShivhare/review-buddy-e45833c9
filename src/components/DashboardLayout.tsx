@@ -52,7 +52,7 @@ function AppSidebar() {
   useEffect(() => {
     if (!business) return;
     const channel = supabase
-      .channel("complaints-realtime")
+      .channel(`complaints-badge-${business.id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "complaints", filter: `business_id=eq.${business.id}` },
