@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link, useNavigate } from "react-router-dom";
-import { Star, MessageSquare, ArrowRight, BarChart3, Shield, Zap, Check } from "lucide-react";
+import { Star, MessageSquare, ArrowRight, BarChart3, Shield, Zap, Check, Building2, Users, TrendingUp, Play } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const faqs = [
