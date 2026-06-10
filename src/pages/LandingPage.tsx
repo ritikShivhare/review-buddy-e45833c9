@@ -192,24 +192,72 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Stats bar */}
+      {/* Stats bar / Trust Banner */}
       <section className="border-y bg-card">
-        <div className="container py-8">
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+        <div className="container py-10">
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
             {[
-              { value: "2,400+", label: "Businesses" },
-              { value: "1.2M", label: "Reviews collected" },
-              { value: "4.6★", label: "Avg rating boost" },
-              { value: "89%", label: "Response rate" },
+              { icon: Building2, value: "2,400+", label: "Businesses" },
+              { icon: MessageSquare, value: "1.2M", label: "Reviews collected" },
+              { icon: Star, value: "4.6★", label: "Avg rating boost" },
+              { icon: TrendingUp, value: "89%", label: "Response rate" },
             ].map((stat, i) => (
-              <AnimatedSection key={stat.label} delay={100 * i} className="text-center">
-                <div className="text-2xl font-bold text-foreground tabular-nums">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
+              <AnimatedSection key={stat.label} delay={100 * i}>
+                <div className="flex items-center gap-4 rounded-xl border bg-background/50 p-4 hover:shadow-sm transition-shadow">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                    <stat.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-foreground tabular-nums leading-none">{stat.value}</div>
+                    <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
+                  </div>
+                </div>
               </AnimatedSection>
             ))}
           </div>
         </div>
       </section>
+
+      {/* Product Preview */}
+      <section className="py-20 lg:py-28">
+        <div className="container">
+          <AnimatedSection className="text-center">
+            <h2 className="text-3xl font-bold text-foreground sm:text-4xl">See ReviewFlow in action</h2>
+            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+              Manage all your customer feedback from one simple dashboard.
+            </p>
+          </AnimatedSection>
+          <AnimatedSection delay={150} className="mt-12">
+            <div className="relative mx-auto max-w-5xl">
+              <div className="relative overflow-hidden rounded-2xl border bg-card shadow-2xl ring-1 ring-primary/10">
+                {/* Browser chrome */}
+                <div className="flex items-center gap-2 border-b bg-secondary/60 px-4 py-3">
+                  <div className="flex gap-1.5">
+                    <div className="h-3 w-3 rounded-full bg-destructive/70" />
+                    <div className="h-3 w-3 rounded-full bg-yellow-400/80" />
+                    <div className="h-3 w-3 rounded-full bg-primary/70" />
+                  </div>
+                  <div className="ml-4 text-xs text-muted-foreground">app.reviewflow.in/dashboard</div>
+                </div>
+                {/* Placeholder content */}
+                <div className="relative aspect-video w-full bg-gradient-to-br from-secondary via-background to-secondary/40 flex items-center justify-center">
+                  <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, hsl(var(--primary)) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
+                  <button className="relative flex flex-col items-center gap-3 group">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
+                      <Play className="h-8 w-8 ml-1" fill="currentColor" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">Watch the 90-second demo</span>
+                  </button>
+                </div>
+              </div>
+              <p className="mt-6 text-center text-sm text-muted-foreground">
+                Manage all your customer feedback from one simple dashboard.
+              </p>
+            </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
 
       {/* How it works */}
       <section id="how-it-works" className="py-20 lg:py-28">
