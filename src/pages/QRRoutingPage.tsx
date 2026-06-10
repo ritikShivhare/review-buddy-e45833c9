@@ -98,7 +98,7 @@ const QRRoutingPage = () => {
 
           <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-destructive/20">
             <CardContent className="p-0">
-              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-6">
+              <a href="#" onClick={handleComplaint} className="flex items-center gap-4 p-6">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
                   <MessageSquare className="h-6 w-6 text-destructive" />
                 </div>
