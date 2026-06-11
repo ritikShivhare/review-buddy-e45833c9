@@ -368,6 +368,37 @@ const LandingPage = () => {
               </AnimatedSection>
             ))}
           </div>
+
+          {/* Comparison Table */}
+          <AnimatedSection delay={200} className="mt-20">
+            <div className="mx-auto max-w-4xl">
+              <h3 className="text-center text-2xl font-bold text-foreground">Starter vs Growth — what's different?</h3>
+              <p className="mt-2 text-center text-sm text-muted-foreground">A detailed look at how the paid plans compare.</p>
+              <div className="mt-8 overflow-hidden rounded-xl border bg-card shadow-sm">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-secondary/50">
+                      <th className="px-6 py-4 text-left font-semibold text-foreground">Feature</th>
+                      <th className="px-6 py-4 text-center font-semibold text-foreground">
+                        Starter
+                        <span className="ml-2 inline-block rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">Recommended</span>
+                      </th>
+                      <th className="px-6 py-4 text-center font-semibold text-foreground">Growth</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comparisonRows.map((row, idx) => (
+                      <tr key={row.feature} className={idx % 2 === 1 ? "bg-secondary/20" : ""}>
+                        <td className="px-6 py-3 text-muted-foreground">{row.feature}</td>
+                        <td className="px-6 py-3 text-center font-medium text-foreground">{row.starter}</td>
+                        <td className="px-6 py-3 text-center font-medium text-foreground">{row.growth}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </AnimatedSection>
         </div>
       </section>
 
