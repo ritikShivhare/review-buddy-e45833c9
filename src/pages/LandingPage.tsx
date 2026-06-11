@@ -436,7 +436,7 @@ const LandingPage = () => {
               Join 2,400+ Indian businesses already using ReviewFlow to boost their Google ratings.
             </p>
             <Button variant="secondary" size="xl" className="mt-8" asChild>
-              <Link to="/sign-up">Start Your Free Trial <ArrowRight className="ml-1" /></Link>
+              <Link to="/sign-up">Boost My Google Ratings — Free Trial <ArrowRight className="ml-1" /></Link>
             </Button>
           </AnimatedSection>
         </div>
