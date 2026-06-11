@@ -128,6 +128,8 @@ function AnimatedSection({ children, className = "", delay = 0 }: { children: Re
 const LandingPage = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [demoOpen, setDemoOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && user) {
