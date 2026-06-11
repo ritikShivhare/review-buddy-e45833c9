@@ -154,7 +154,7 @@ const LandingPage = () => {
         <div className="container flex h-16 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Star className="h-4 w-4 text-primary-foreground" />
+              <Star className="h-4 w-4 text-primary-foreground" aria-hidden="true" />
             </div>
             <span className="text-lg font-bold text-foreground">ReviewFlow</span>
           </Link>
@@ -191,7 +191,7 @@ const LandingPage = () => {
             <AnimatedSection delay={240}>
               <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <Button variant="hero" size="xl" asChild>
-                  <Link to="/sign-up">Boost Your Ratings Today — Free Trial <ArrowRight className="ml-1 h-5 w-5" /></Link>
+                  <Link to="/sign-up">Boost Your Ratings Today — Free Trial <ArrowRight className="ml-1 h-5 w-5" aria-hidden="true" /></Link>
                 </Button>
                 <Button variant="hero-outline" size="xl" asChild>
                   <a href="#how-it-works">See How It Works</a>
@@ -218,7 +218,7 @@ const LandingPage = () => {
               <AnimatedSection key={stat.label} delay={100 * i}>
                 <div className="flex items-center gap-4 rounded-xl border bg-background/50 p-4 hover:shadow-sm transition-shadow">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                    <stat.icon className="h-6 w-6 text-primary" />
+                    <stat.icon className="h-6 w-6 text-primary" aria-hidden="true" />
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-foreground tabular-nums leading-none">{stat.value}</div>
@@ -257,7 +257,7 @@ const LandingPage = () => {
                   <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, hsl(var(--primary)) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
                   <button className="relative flex flex-col items-center gap-3 group">
                     <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
-                      <Play className="h-8 w-8 ml-1" fill="currentColor" />
+                      <Play className="h-8 w-8 ml-1" fill="currentColor" aria-hidden="true" />
                     </div>
                     <span className="text-sm font-semibold text-foreground">Watch the 90-second demo</span>
                   </button>
@@ -285,7 +285,7 @@ const LandingPage = () => {
                 <Card className="relative overflow-hidden border bg-card shadow-sm hover:shadow-md transition-shadow duration-300">
                   <CardContent className="p-8">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary">
-                      <step.icon className="h-6 w-6 text-primary" />
+                      <step.icon className="h-6 w-6 text-primary" aria-hidden="true" />
                     </div>
                     <div className="mt-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Step {i + 1}</div>
                     <h3 className="mt-3 text-xl font-semibold text-foreground">{step.title}</h3>
@@ -315,7 +315,7 @@ const LandingPage = () => {
             ].map((f, i) => (
               <AnimatedSection key={f.title} delay={80 * i}>
                 <div className="rounded-xl border bg-card p-6 hover:shadow-sm transition-shadow">
-                  <f.icon className="h-5 w-5 text-primary" />
+                  <f.icon className="h-5 w-5 text-primary" aria-hidden="true" />
                   <h3 className="mt-3 font-semibold text-foreground">{f.title}</h3>
                   <p className="mt-1 text-sm text-muted-foreground">{f.desc}</p>
                 </div>
@@ -338,7 +338,7 @@ const LandingPage = () => {
                 <Card className={`relative overflow-hidden ${plan.popular ? "border-primary shadow-lg ring-2 ring-primary/30 md:-translate-y-2" : "border shadow-sm"}`}>
                   {plan.popular && (
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-md">
-                      <Star className="h-3 w-3" fill="currentColor" />
+                      <Star className="h-3 w-3" fill="currentColor" aria-hidden="true" />
                       Recommended
                     </div>
                   )}
@@ -351,7 +351,7 @@ const LandingPage = () => {
                     <ul className="mt-6 space-y-3">
                       {plan.features.map((f) => (
                         <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" aria-hidden="true" />
                           {f}
                         </li>
                       ))}
@@ -432,11 +432,11 @@ const LandingPage = () => {
         <div className="container text-center">
           <AnimatedSection>
             <h2 className="text-3xl font-bold text-primary-foreground sm:text-4xl">Ready to grow your reviews?</h2>
-            <p className="mt-3 text-primary-foreground/80 max-w-lg mx-auto">
+            <p className="mt-3 text-primary-foreground/95 max-w-lg mx-auto">
               Join 2,400+ Indian businesses already using ReviewFlow to boost their Google ratings.
             </p>
             <Button variant="secondary" size="xl" className="mt-8" asChild>
-              <Link to="/sign-up">Boost My Google Ratings — Free Trial <ArrowRight className="ml-1" /></Link>
+              <Link to="/sign-up">Boost My Google Ratings — Free Trial <ArrowRight className="ml-1" aria-hidden="true" /></Link>
             </Button>
           </AnimatedSection>
         </div>
@@ -447,7 +447,7 @@ const LandingPage = () => {
         <div className="container flex flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
-              <Star className="h-3.5 w-3.5 text-primary-foreground" />
+              <Star className="h-3.5 w-3.5 text-primary-foreground" aria-hidden="true" />
             </div>
             <span className="font-semibold text-foreground">ReviewFlow</span>
           </div>
