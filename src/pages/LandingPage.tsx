@@ -69,7 +69,7 @@ const plans = [
     price: "Free",
     period: "14 days",
     features: ["50 review requests", "Basic dashboard", "WhatsApp messaging", "1 business location"],
-    cta: "Start Free Trial",
+    cta: "Try It Free for 14 Days",
     popular: false,
   },
   {
@@ -77,7 +77,7 @@ const plans = [
     price: "₹499",
     period: "/month",
     features: ["500 review requests/mo", "Full dashboard & analytics", "CSV import", "Priority support", "Custom templates"],
-    cta: "Get Started",
+    cta: "Boost My Ratings — Start Now",
     popular: true,
   },
   {
@@ -92,9 +92,22 @@ const plans = [
       "Dedicated account manager",
       "Custom integrations",
     ],
-    cta: "Contact Sales",
+    cta: "Talk to Sales",
     popular: false,
   },
+];
+
+const comparisonRows = [
+  { feature: "Monthly review requests", starter: "500", growth: "Unlimited" },
+  { feature: "Business locations", starter: "1", growth: "Unlimited" },
+  { feature: "Team members", starter: "—", growth: "✓" },
+  { feature: "CSV customer import", starter: "✓", growth: "✓" },
+  { feature: "Dashboard & analytics", starter: "✓", growth: "Advanced" },
+  { feature: "Custom message templates", starter: "✓", growth: "✓" },
+  { feature: "API access", starter: "—", growth: "✓" },
+  { feature: "Custom integrations", starter: "—", growth: "✓" },
+  { feature: "Dedicated account manager", starter: "—", growth: "✓" },
+  { feature: "Support", starter: "Priority email", growth: "Priority + Phone" },
 ];
 
 function AnimatedSection({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
