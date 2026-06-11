@@ -193,7 +193,6 @@ const LandingPage = () => {
                 <Button variant="hero" size="xl" asChild>
                   <Link to="/sign-up">Boost Your Ratings Today — Free Trial <ArrowRight className="ml-1 h-5 w-5" /></Link>
                 </Button>
-                </Button>
                 <Button variant="hero-outline" size="xl" asChild>
                   <a href="#how-it-works">See How It Works</a>
                 </Button>
