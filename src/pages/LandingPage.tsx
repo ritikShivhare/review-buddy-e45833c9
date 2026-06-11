@@ -69,7 +69,7 @@ const plans = [
     price: "Free",
     period: "14 days",
     features: ["50 review requests", "Basic dashboard", "WhatsApp messaging", "1 business location"],
-    cta: "Start Free Trial",
+    cta: "Try It Free for 14 Days",
     popular: false,
   },
   {
@@ -77,7 +77,7 @@ const plans = [
     price: "₹499",
     period: "/month",
     features: ["500 review requests/mo", "Full dashboard & analytics", "CSV import", "Priority support", "Custom templates"],
-    cta: "Get Started",
+    cta: "Boost My Ratings — Start Now",
     popular: true,
   },
   {
@@ -92,9 +92,22 @@ const plans = [
       "Dedicated account manager",
       "Custom integrations",
     ],
-    cta: "Contact Sales",
+    cta: "Talk to Sales",
     popular: false,
   },
+];
+
+const comparisonRows = [
+  { feature: "Monthly review requests", starter: "500", growth: "Unlimited" },
+  { feature: "Business locations", starter: "1", growth: "Unlimited" },
+  { feature: "Team members", starter: "—", growth: "✓" },
+  { feature: "CSV customer import", starter: "✓", growth: "✓" },
+  { feature: "Dashboard & analytics", starter: "✓", growth: "Advanced" },
+  { feature: "Custom message templates", starter: "✓", growth: "✓" },
+  { feature: "API access", starter: "—", growth: "✓" },
+  { feature: "Custom integrations", starter: "—", growth: "✓" },
+  { feature: "Dedicated account manager", starter: "—", growth: "✓" },
+  { feature: "Support", starter: "Priority email", growth: "Priority + Phone" },
 ];
 
 function AnimatedSection({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -154,7 +167,7 @@ const LandingPage = () => {
               <Link to="/sign-in">Sign In</Link>
             </Button>
             <Button size="sm" asChild>
-              <Link to="/sign-up">Start Free Trial</Link>
+              <Link to="/sign-up">Boost My Ratings — Free</Link>
             </Button>
           </div>
         </div>
@@ -178,7 +191,7 @@ const LandingPage = () => {
             <AnimatedSection delay={240}>
               <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <Button variant="hero" size="xl" asChild>
-                  <Link to="/sign-up">Start Free Trial <ArrowRight className="ml-1 h-5 w-5" /></Link>
+                  <Link to="/sign-up">Boost Your Ratings Today — Free Trial <ArrowRight className="ml-1 h-5 w-5" /></Link>
                 </Button>
                 <Button variant="hero-outline" size="xl" asChild>
                   <a href="#how-it-works">See How It Works</a>
@@ -322,10 +335,11 @@ const LandingPage = () => {
           <div className="mt-14 grid gap-8 md:grid-cols-3 max-w-4xl mx-auto">
             {plans.map((plan, i) => (
               <AnimatedSection key={plan.name} delay={150 * i}>
-                <Card className={`relative overflow-hidden ${plan.popular ? "border-primary shadow-lg ring-1 ring-primary/20" : "border shadow-sm"}`}>
+                <Card className={`relative overflow-hidden ${plan.popular ? "border-primary shadow-lg ring-2 ring-primary/30 md:-translate-y-2" : "border shadow-sm"}`}>
                   {plan.popular && (
-                    <div className="absolute top-0 right-0 bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground rounded-bl-lg">
-                      Popular
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-md">
+                      <Star className="h-3 w-3" fill="currentColor" />
+                      Recommended
                     </div>
                   )}
                   <CardContent className="p-8">
@@ -354,6 +368,37 @@ const LandingPage = () => {
               </AnimatedSection>
             ))}
           </div>
+
+          {/* Comparison Table */}
+          <AnimatedSection delay={200} className="mt-20">
+            <div className="mx-auto max-w-4xl">
+              <h3 className="text-center text-2xl font-bold text-foreground">Starter vs Growth — what's different?</h3>
+              <p className="mt-2 text-center text-sm text-muted-foreground">A detailed look at how the paid plans compare.</p>
+              <div className="mt-8 overflow-hidden rounded-xl border bg-card shadow-sm">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-secondary/50">
+                      <th className="px-6 py-4 text-left font-semibold text-foreground">Feature</th>
+                      <th className="px-6 py-4 text-center font-semibold text-foreground">
+                        Starter
+                        <span className="ml-2 inline-block rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">Recommended</span>
+                      </th>
+                      <th className="px-6 py-4 text-center font-semibold text-foreground">Growth</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comparisonRows.map((row, idx) => (
+                      <tr key={row.feature} className={idx % 2 === 1 ? "bg-secondary/20" : ""}>
+                        <td className="px-6 py-3 text-muted-foreground">{row.feature}</td>
+                        <td className="px-6 py-3 text-center font-medium text-foreground">{row.starter}</td>
+                        <td className="px-6 py-3 text-center font-medium text-foreground">{row.growth}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </AnimatedSection>
         </div>
       </section>
 
@@ -391,7 +436,7 @@ const LandingPage = () => {
               Join 2,400+ Indian businesses already using ReviewFlow to boost their Google ratings.
             </p>
             <Button variant="secondary" size="xl" className="mt-8" asChild>
-              <Link to="/sign-up">Start Your Free Trial <ArrowRight className="ml-1" /></Link>
+              <Link to="/sign-up">Boost My Google Ratings — Free Trial <ArrowRight className="ml-1" /></Link>
             </Button>
           </AnimatedSection>
         </div>
