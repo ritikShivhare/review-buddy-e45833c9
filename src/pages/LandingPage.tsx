@@ -464,6 +464,24 @@ const LandingPage = () => {
           <p className="text-sm text-muted-foreground">© 2026 ReviewFlow. Made for Indian businesses.</p>
         </div>
       </footer>
+
+      {/* Demo video modal */}
+      <Dialog open={demoOpen} onOpenChange={setDemoOpen}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black border-0">
+          <DialogTitle className="sr-only">ReviewFlow product demo</DialogTitle>
+          <div className="aspect-video w-full">
+            {demoOpen && (
+              <iframe
+                src={DEMO_VIDEO_URL}
+                title="ReviewFlow 90-second product demo"
+                className="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
