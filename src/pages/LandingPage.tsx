@@ -169,6 +169,7 @@ const LandingPage = () => {
             <Button size="sm" asChild>
               <Link to="/sign-up">Boost My Ratings — Free</Link>
             </Button>
+          </div>
         </div>
       </nav>
 
