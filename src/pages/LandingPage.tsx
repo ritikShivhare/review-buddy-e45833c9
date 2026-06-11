@@ -335,10 +335,11 @@ const LandingPage = () => {
           <div className="mt-14 grid gap-8 md:grid-cols-3 max-w-4xl mx-auto">
             {plans.map((plan, i) => (
               <AnimatedSection key={plan.name} delay={150 * i}>
-                <Card className={`relative overflow-hidden ${plan.popular ? "border-primary shadow-lg ring-1 ring-primary/20" : "border shadow-sm"}`}>
+                <Card className={`relative overflow-hidden ${plan.popular ? "border-primary shadow-lg ring-2 ring-primary/30 md:-translate-y-2" : "border shadow-sm"}`}>
                   {plan.popular && (
-                    <div className="absolute top-0 right-0 bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground rounded-bl-lg">
-                      Popular
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-md">
+                      <Star className="h-3 w-3" fill="currentColor" />
+                      Recommended
                     </div>
                   )}
                   <CardContent className="p-8">
