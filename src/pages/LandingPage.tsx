@@ -191,7 +191,8 @@ const LandingPage = () => {
             <AnimatedSection delay={240}>
               <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <Button variant="hero" size="xl" asChild>
-                  <Link to="/sign-up">Start Free Trial <ArrowRight className="ml-1 h-5 w-5" /></Link>
+                  <Link to="/sign-up">Boost Your Ratings Today — Free Trial <ArrowRight className="ml-1 h-5 w-5" /></Link>
+                </Button>
                 </Button>
                 <Button variant="hero-outline" size="xl" asChild>
                   <a href="#how-it-works">See How It Works</a>
