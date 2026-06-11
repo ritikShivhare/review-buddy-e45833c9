@@ -1,11 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Link, useNavigate } from "react-router-dom";
 import { Star, MessageSquare, ArrowRight, BarChart3, Shield, Zap, Check, Building2, Users, TrendingUp, Play } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Replace with your real demo video. Supports YouTube embed URLs.
+const DEMO_VIDEO_URL = "https://www.youtube.com/embed/ysz5S6PUM-U?autoplay=1&rel=0";
 
 const faqs = [
   {
