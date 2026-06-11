@@ -167,9 +167,8 @@ const LandingPage = () => {
               <Link to="/sign-in">Sign In</Link>
             </Button>
             <Button size="sm" asChild>
-              <Link to="/sign-up">Start Free Trial</Link>
+              <Link to="/sign-up">Boost My Ratings — Free</Link>
             </Button>
-          </div>
         </div>
       </nav>
 
