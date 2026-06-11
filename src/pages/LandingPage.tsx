@@ -260,7 +260,12 @@ const LandingPage = () => {
                 {/* Placeholder content */}
                 <div className="relative aspect-video w-full bg-gradient-to-br from-secondary via-background to-secondary/40 flex items-center justify-center">
                   <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, hsl(var(--primary)) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
-                  <button className="relative flex flex-col items-center gap-3 group">
+                  <button
+                    type="button"
+                    onClick={() => setDemoOpen(true)}
+                    aria-label="Play 90-second product demo"
+                    className="relative flex flex-col items-center gap-3 group"
+                  >
                     <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
                       <Play className="h-8 w-8 ml-1" fill="currentColor" aria-hidden="true" />
                     </div>
