@@ -38,10 +38,13 @@ const CustomersPage = () => {
   const addCustomer = useMutation({
     mutationFn: async () => {
       if (!business) throw new Error("No business");
+      if (!/^\d{10}$/.test(newPhone)) {
+        throw new Error("Phone must be exactly 10 digits");
+      }
       const { error } = await supabase.from("customers").insert({
         business_id: business.id,
-        name: newName,
-        phone: newPhone,
+        name: newName.trim(),
+        phone: `+91${newPhone}`,
       });
       if (error) throw error;
     },
@@ -104,9 +107,25 @@ const CustomersPage = () => {
               </div>
               <div className="space-y-2">
                 <Label>Phone (WhatsApp)</Label>
-                <Input placeholder="+91 98765 43210" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
+                <div className="flex">
+                  <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                    +91
+                  </span>
+                  <Input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="9876543210"
+                    maxLength={10}
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    className="rounded-l-none"
+                  />
+                </div>
+                {newPhone.length > 0 && newPhone.length < 10 && (
+                  <p className="text-xs text-destructive">Enter all 10 digits ({newPhone.length}/10)</p>
+                )}
               </div>
-              <Button className="w-full" onClick={() => addCustomer.mutate()} disabled={!newName || !newPhone || addCustomer.isPending}>
+              <Button className="w-full" onClick={() => addCustomer.mutate()} disabled={!newName.trim() || newPhone.length !== 10 || addCustomer.isPending}>
                 {addCustomer.isPending ? "Adding..." : "Add Customer"}
               </Button>
             </div>
