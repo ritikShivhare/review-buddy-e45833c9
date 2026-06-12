@@ -334,10 +334,10 @@ const LandingPage = () => {
             <h2 className="text-3xl font-bold text-foreground sm:text-4xl">Simple, transparent pricing</h2>
             <p className="mt-3 text-muted-foreground">Start free. Scale when you're ready.</p>
           </AnimatedSection>
-          <div className="mt-14 grid gap-8 md:grid-cols-3 max-w-4xl mx-auto">
+          <div className="mt-16 grid gap-8 md:grid-cols-3 max-w-4xl mx-auto md:pt-4">
             {plans.map((plan, i) => (
               <AnimatedSection key={plan.name} delay={150 * i}>
-                <Card className={`relative overflow-hidden ${plan.popular ? "border-primary shadow-lg ring-2 ring-primary/30 md:-translate-y-2" : "border shadow-sm"}`}>
+                <Card className={`relative ${plan.popular ? "overflow-visible border-primary shadow-lg ring-2 ring-primary/30 md:-translate-y-2" : "overflow-hidden border shadow-sm"}`}>
                   {plan.popular && (
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-md">
                       <Star className="h-3 w-3" fill="currentColor" aria-hidden="true" />
