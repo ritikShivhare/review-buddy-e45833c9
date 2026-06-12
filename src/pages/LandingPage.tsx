@@ -3,13 +3,9 @@ import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Link, useNavigate } from "react-router-dom";
-import { Star, MessageSquare, ArrowRight, BarChart3, Shield, Zap, Check, Building2, Users, TrendingUp, Play } from "lucide-react";
+import { Star, MessageSquare, ArrowRight, BarChart3, Shield, Zap, Check, Building2, Users, TrendingUp, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-
-// Replace with your real demo video. Supports YouTube embed URLs.
-const DEMO_VIDEO_URL = "https://www.youtube.com/embed/ysz5S6PUM-U?autoplay=1&rel=0";
 
 const faqs = [
   {
@@ -128,7 +124,7 @@ function AnimatedSection({ children, className = "", delay = 0 }: { children: Re
 const LandingPage = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [demoOpen, setDemoOpen] = useState(false);
+  
 
   useEffect(() => {
     if (!loading && user) {
@@ -260,17 +256,13 @@ const LandingPage = () => {
                 {/* Placeholder content */}
                 <div className="relative aspect-video w-full bg-gradient-to-br from-secondary via-background to-secondary/40 flex items-center justify-center">
                   <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, hsl(var(--primary)) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
-                  <button
-                    type="button"
-                    onClick={() => setDemoOpen(true)}
-                    aria-label="Play 90-second product demo"
-                    className="relative flex flex-col items-center gap-3 group"
-                  >
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
-                      <Play className="h-8 w-8 ml-1" fill="currentColor" aria-hidden="true" />
+                  <div className="relative flex flex-col items-center gap-3 text-center px-6">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
+                      <LayoutDashboard className="h-9 w-9" aria-hidden="true" />
                     </div>
-                    <span className="text-sm font-semibold text-foreground">Watch the 90-second demo</span>
-                  </button>
+                    <span className="text-sm font-semibold text-foreground">Your reviews dashboard</span>
+                    <span className="text-xs text-muted-foreground max-w-xs">Track ratings, requests and complaints in real time.</span>
+                  </div>
                 </div>
               </div>
               <p className="mt-6 text-center text-sm text-muted-foreground">
@@ -465,23 +457,6 @@ const LandingPage = () => {
         </div>
       </footer>
 
-      {/* Demo video modal */}
-      <Dialog open={demoOpen} onOpenChange={setDemoOpen}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black border-0">
-          <DialogTitle className="sr-only">ReviewFlow product demo</DialogTitle>
-          <div className="aspect-video w-full">
-            {demoOpen && (
-              <iframe
-                src={DEMO_VIDEO_URL}
-                title="ReviewFlow 90-second product demo"
-                className="h-full w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

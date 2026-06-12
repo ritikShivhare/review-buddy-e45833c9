@@ -8,7 +8,6 @@ import { Star, Download } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/hooks/useBusiness";
-import { useSubscription, isPaidPlan } from "@/hooks/useSubscription";
 import { toast } from "sonner";
 
 function StarsDisplay({ rating }: { rating: number }) {
@@ -30,7 +29,7 @@ const routeMap: Record<string, { label: string; variant: "default" | "destructiv
 
 const ReviewsPage = () => {
   const { data: business } = useBusiness();
-  const { data: subscription } = useSubscription();
+  
   const [ratingFilter, setRatingFilter] = useState("all");
 
   const { data: reviews = [], isLoading } = useQuery({
@@ -55,8 +54,8 @@ const ReviewsPage = () => {
   });
 
   const handleExportCSV = () => {
-    if (!isPaidPlan(subscription?.plan)) {
-      toast.error("CSV export is available on Starter plan and above");
+    if (reviews.length === 0) {
+      toast.error("No reviews to export yet");
       return;
     }
     const escape = (v: unknown) => {
@@ -93,7 +92,6 @@ const ReviewsPage = () => {
         </div>
         <Button variant="outline" size="sm" onClick={handleExportCSV}>
           <Download className="mr-1.5 h-4 w-4" /> Export CSV
-          {!isPaidPlan(subscription?.plan) && <Badge variant="secondary" className="ml-2 text-[10px]">Pro</Badge>}
         </Button>
       </div>
 
