@@ -12,6 +12,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
+import { usePlanAccess } from "@/hooks/usePlanAccess";
+import TrialReminderDialog from "@/components/TrialReminderDialog";
+import { Badge as PlanBadge } from "@/components/ui/badge";
 import { BarChart3, Users, Star, AlertTriangle, Settings, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
@@ -135,6 +138,7 @@ function SignOutButton({ collapsed }: { collapsed: boolean }) {
 
 const DashboardLayout = () => {
   const { data: business, isLoading } = useBusiness();
+  const { isLoading: planLoading, hasAccess } = usePlanAccess();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -143,13 +147,21 @@ const DashboardLayout = () => {
     }
   }, [isLoading, business, navigate]);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!planLoading && !hasAccess) {
+      navigate("/upgrade", { replace: true });
+    }
+  }, [planLoading, hasAccess, navigate]);
+
+  if (isLoading || planLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
+
+  if (!hasAccess) return null;
 
   const initials = business?.business_name
     ?.split(" ")
