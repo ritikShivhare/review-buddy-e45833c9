@@ -202,7 +202,11 @@ export type Database = {
           current_period_end: string | null
           id: string
           plan: string | null
+          reminder_1d_sent_at: string | null
+          reminder_2d_sent_at: string | null
           status: string | null
+          trial_ends_at: string | null
+          trial_started_at: string | null
           user_id: string
         }
         Insert: {
@@ -210,7 +214,11 @@ export type Database = {
           current_period_end?: string | null
           id?: string
           plan?: string | null
+          reminder_1d_sent_at?: string | null
+          reminder_2d_sent_at?: string | null
           status?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           user_id: string
         }
         Update: {
@@ -218,7 +226,11 @@ export type Database = {
           current_period_end?: string | null
           id?: string
           plan?: string | null
+          reminder_1d_sent_at?: string | null
+          reminder_2d_sent_at?: string | null
           status?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -242,6 +254,14 @@ export type Database = {
         Returns: {
           business_name: string
           manager_phone: string
+        }[]
+      }
+      get_plan_limits: {
+        Args: { _plan: string }
+        Returns: {
+          max_locations: number
+          max_requests_per_month: number
+          max_team: number
         }[]
       }
       get_public_business: {
