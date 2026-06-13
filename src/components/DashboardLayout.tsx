@@ -12,6 +12,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
+import { usePlanAccess } from "@/hooks/usePlanAccess";
+import TrialReminderDialog from "@/components/TrialReminderDialog";
+import { Badge as PlanBadge } from "@/components/ui/badge";
 import { BarChart3, Users, Star, AlertTriangle, Settings, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
@@ -135,6 +138,7 @@ function SignOutButton({ collapsed }: { collapsed: boolean }) {
 
 const DashboardLayout = () => {
   const { data: business, isLoading } = useBusiness();
+  const { isLoading: planLoading, hasAccess, isTrialing, daysLeft } = usePlanAccess();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -143,13 +147,21 @@ const DashboardLayout = () => {
     }
   }, [isLoading, business, navigate]);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!planLoading && !hasAccess) {
+      navigate("/upgrade", { replace: true });
+    }
+  }, [planLoading, hasAccess, navigate]);
+
+  if (isLoading || planLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
+
+  if (!hasAccess) return null;
 
   const initials = business?.business_name
     ?.split(" ")
@@ -166,6 +178,13 @@ const DashboardLayout = () => {
           <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/80 backdrop-blur-sm px-4">
             <SidebarTrigger />
             <div className="flex-1" />
+            {isTrialing && (
+              <Link to="/upgrade" className="hidden sm:inline-flex">
+                <PlanBadge variant={daysLeft <= 2 ? "destructive" : "secondary"} className="cursor-pointer">
+                  Trial: {daysLeft} day{daysLeft === 1 ? "" : "s"} left · Upgrade
+                </PlanBadge>
+              </Link>
+            )}
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
                 {initials}
@@ -176,6 +195,7 @@ const DashboardLayout = () => {
           <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <Outlet />
           </main>
+          <TrialReminderDialog />
         </div>
       </div>
     </SidebarProvider>

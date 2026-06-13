@@ -17,6 +17,7 @@ import ReviewsPage from "./pages/ReviewsPage";
 import ComplaintsPage from "./pages/ComplaintsPage";
 import SettingsPage from "./pages/SettingsPage";
 import QRRoutingPage from "./pages/QRRoutingPage";
+import UpgradePage from "./pages/UpgradePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/sign-up" element={<SignUpPage />} />
             <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
             <Route path="/r/:businessId" element={<QRRoutingPage />} />
+            <Route path="/upgrade" element={<ProtectedRoute><UpgradePage /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route index element={<DashboardPage />} />
               <Route path="customers" element={<CustomersPage />} />

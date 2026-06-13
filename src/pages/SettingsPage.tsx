@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, QrCode, Download } from "lucide-react";
+import { Save, QrCode, Download, Sparkles } from "lucide-react";
 import { useBusiness, useUpdateBusiness } from "@/hooks/useBusiness";
+import { usePlanAccess } from "@/hooks/usePlanAccess";
 import { QRCodeSVG } from "qrcode.react";
 
 const defaultTemplates = {
@@ -20,6 +23,7 @@ const defaultTemplates = {
 const SettingsPage = () => {
   const { data: business, isLoading } = useBusiness();
   const updateBusiness = useUpdateBusiness();
+  const { plan, status, daysLeft, isTrialing, trialEndsAt, limits } = usePlanAccess();
   const [templates, setTemplates] = useState(defaultTemplates);
 
   const [form, setForm] = useState({
@@ -89,6 +93,7 @@ const SettingsPage = () => {
           <TabsTrigger value="business">Business Info</TabsTrigger>
           <TabsTrigger value="templates">Message Templates</TabsTrigger>
           <TabsTrigger value="qr">QR Code</TabsTrigger>
+          <TabsTrigger value="billing">Billing</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
         </TabsList>
 
@@ -172,6 +177,48 @@ const SettingsPage = () => {
                 <Button variant="outline" onClick={handleDownloadQR} disabled={!qrUrl}>
                   <Download className="mr-1.5 h-4 w-4" /> Download PNG
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="billing">
+          <Card className="shadow-sm">
+            <CardContent className="p-6 space-y-5">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-foreground capitalize">{plan} Plan</h3>
+                    <Badge variant={status === "active" ? "default" : status === "trialing" ? "secondary" : "destructive"} className="capitalize">
+                      {status}
+                    </Badge>
+                  </div>
+                  {isTrialing && trialEndsAt && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Trial ends in <span className="font-semibold text-foreground">{daysLeft} day{daysLeft === 1 ? "" : "s"}</span> ({trialEndsAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })})
+                    </p>
+                  )}
+                  {status === "active" && (
+                    <p className="mt-1 text-sm text-muted-foreground">Your subscription is active.</p>
+                  )}
+                </div>
+                <Button asChild>
+                  <Link to="/upgrade"><Sparkles className="mr-1.5 h-4 w-4" /> {status === "active" ? "Change plan" : "Upgrade"}</Link>
+                </Button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3 pt-4 border-t">
+                <div>
+                  <p className="text-xs text-muted-foreground">Customer / request limit</p>
+                  <p className="text-lg font-semibold text-foreground">{limits.maxRequests === Infinity ? "Unlimited" : limits.maxRequests}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Locations</p>
+                  <p className="text-lg font-semibold text-foreground">{limits.maxLocations === Infinity ? "Unlimited" : limits.maxLocations}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Team members</p>
+                  <p className="text-lg font-semibold text-foreground">{limits.maxTeam === Infinity ? "Unlimited" : limits.maxTeam}</p>
+                </div>
               </div>
             </CardContent>
           </Card>

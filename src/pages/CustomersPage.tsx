@@ -10,10 +10,14 @@ import { Plus, Search, Send, Star } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/hooks/useBusiness";
+import { usePlanAccess } from "@/hooks/usePlanAccess";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const CustomersPage = () => {
   const { data: business } = useBusiness();
+  const { plan, limits } = usePlanAccess();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,6 +45,9 @@ const CustomersPage = () => {
       if (!/^\d{10}$/.test(newPhone)) {
         throw new Error("Phone must be exactly 10 digits");
       }
+      if (customers.length >= limits.maxRequests) {
+        throw new Error(`QUOTA:Your ${plan} plan allows ${limits.maxRequests} customers. Upgrade for more.`);
+      }
       const { error } = await supabase.from("customers").insert({
         business_id: business.id,
         name: newName.trim(),
@@ -55,7 +62,16 @@ const CustomersPage = () => {
       setNewPhone("");
       toast.success("Customer added");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => {
+      const msg = err.message || "Failed";
+      if (msg.startsWith("QUOTA:")) {
+        toast.error(msg.replace("QUOTA:", ""), {
+          action: { label: "Upgrade", onClick: () => navigate("/upgrade") },
+        });
+      } else {
+        toast.error(msg);
+      }
+    },
   });
 
   const sendRequest = useMutation({
