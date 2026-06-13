@@ -1,38 +1,83 @@
-## Problem
+## Goal
 
-Two flows are non-functional:
+Every new signup gets an automatic 14-day Starter trial. Plans differ only by usage caps. Users get email + in-app reminders 2 days and 1 day before expiry. After expiry with no paid plan, the dashboard is locked behind a paywall.
 
-1. **"Request" button** on `/dashboard/customers` (CustomersPage.tsx, line 132) has no `onClick` handler. Clicking it does nothing — no WhatsApp open, no DB update.
-2. **"File a Complaint"** on the public QR page (`/r/:businessId`) opens a WhatsApp chat to the manager but **never inserts a row into the `complaints` table**. So the Complaints page and sidebar badge stay empty even after a customer "files" one.
+## Plan tiers (caps-only)
 
-Since no Twilio is wired yet, the "Send Request" action should also be a WhatsApp deep-link (consistent with the rest of the app — Indian market, WhatsApp-first).
+| Capability | Trial (14d) | Starter ₹499/mo | Growth ₹1,499/mo |
+|---|---|---|---|
+| Review requests / month | 50 | 500 | Unlimited |
+| Business locations | 1 | 1 | Unlimited |
+| Team members | 1 | 1 | Unlimited |
+| All features (dashboard, CSV import/export, QR, complaints, WhatsApp, templates, analytics) | ✓ | ✓ | ✓ |
 
-## Plan
+All feature pages stay open for every plan. Only the numeric caps are enforced.
 
-### 1. CustomersPage — make "Request" send a WhatsApp review request
-- Add `handleRequest(customer)` that:
-  - Builds the public review link: `${window.location.origin}/r/${business.id}`
-  - Normalizes the customer's phone (strip spaces/`+`/`-`/`()`), defaulting to `91` country code if missing.
-  - Opens `https://wa.me/<phone>?text=<encoded message>` in a new tab. Message:
-    `"Hi <name>, thanks for visiting <business_name>! We'd love your feedback: <link>"`
-  - Updates the customer row: `status = "requested"`, `last_requested_at = now()` (if column exists; otherwise just `status`).
-  - Invalidates the `customers` query and toasts "Request sent".
-- Wire `onClick={() => handleRequest(c)}` on the Request button.
+## 1. Database changes
 
-### 2. QRRoutingPage — actually create a complaint row
-- In `handleComplaint`, before opening WhatsApp:
-  - Insert into `public.complaints` via a new `SECURITY DEFINER` RPC `file_complaint(_business_id, _customer_name?, _customer_phone?, _complaint_text?)` that inserts a row with `status='new'`. Public/anon callable.
-  - On success, then open the WhatsApp URL (existing logic).
-- Optionally add a tiny pre-submit form (name + short message) on the public page so the complaint row carries useful info. **Decision needed** — see questions.
+Extend `subscriptions` table:
+- `trial_started_at timestamptz`
+- `trial_ends_at timestamptz`
+- `reminder_2d_sent_at timestamptz`
+- `reminder_1d_sent_at timestamptz`
+- `status` values: `trialing` | `active` | `expired` | `canceled`
 
-### 3. Migration
-- Create `public.file_complaint` SECURITY DEFINER function that allows anon to insert a complaint scoped to a business id. Grant EXECUTE to `anon, authenticated`.
-- Verify `complaints` table has columns used (`customer_name`, `customer_phone`, `complaint_text`, `status`, `business_id`) — already present per ComplaintsPage usage.
+Update `handle_new_user()` trigger so every new auth user gets a row with `plan='trial'`, `status='trialing'`, `trial_started_at=now()`, `trial_ends_at=now()+14 days`.
 
-### 4. Verify
-- Add a customer → click Request → WhatsApp tab opens with prefilled link; row status flips to "requested".
-- Open `/r/<businessId>` in incognito → click File a Complaint → row appears in Complaints page and sidebar badge increments in realtime.
+Add helper SQL function `get_plan_limits(plan text)` returning `{ max_requests_per_month, max_locations, max_team }`.
 
-## Open question
+Backfill: existing users on `plan='free'` get a trial window starting from their `created_at`.
 
-Before filing a complaint, should the public page show a small form (name + message) so the complaint row carries context, or just insert a stub row ("Complaint via QR") and rely on the WhatsApp chat for details?
+## 2. Access control
+
+New hook `usePlanAccess()` returns `{ plan, status, trialEndsAt, daysLeft, isExpired, limits }`.
+
+`ProtectedRoute` (and `DashboardLayout`) reads this:
+- `status === 'trialing'` and `daysLeft >= 0` → allow.
+- `status === 'active'` (starter/growth) → allow.
+- Otherwise → redirect to new `/upgrade` page (paywall) showing Starter/Growth cards and a "Choose a Plan" CTA. No dashboard route renders.
+
+Settings page gets a "Billing" section showing current plan, trial countdown, and upgrade buttons.
+
+## 3. Cap enforcement (where caps actually matter)
+
+- **Add customer / send review request**: count this calendar month's requests for the business; if `>= max_requests_per_month`, block with a toast linking to `/upgrade`.
+- **Onboarding / add location**: hide multi-location UI unless Growth.
+- **Team members**: hide invite UI unless Growth (placeholder page is fine for now).
+
+CSV export, QR, complaints, WhatsApp messaging, templates, analytics stay available to everyone with an active plan or trial.
+
+## 4. In-app reminder popup
+
+New `<TrialReminderDialog />` mounted in `DashboardLayout`. Shows once per day when `daysLeft <= 2 && status === 'trialing'`:
+- Headline: "Only {n} day(s) left in your free trial"
+- CTA buttons: "Upgrade to Starter" / "Upgrade to Growth" → `/upgrade`
+- "Remind me later" stores dismissal in `localStorage` keyed by date.
+
+## 5. Reminder emails (Lovable Emails)
+
+Set up Lovable Cloud email infrastructure with a sender domain, then scaffold two app email templates:
+- `trial-reminder-2d` — "2 days left in your ReviewFlow trial"
+- `trial-reminder-1d` — "Last day of your ReviewFlow trial"
+
+Both branded with the green/white aesthetic and a CTA button linking to `/upgrade`.
+
+New scheduled edge function `trial-reminder-cron` runs hourly via `pg_cron`:
+1. Find subscriptions where `status='trialing'` and `trial_ends_at` is between 47-48h from now and `reminder_2d_sent_at IS NULL` → enqueue `trial-reminder-2d`, stamp `reminder_2d_sent_at`.
+2. Same for 23-24h window → `trial-reminder-1d`.
+3. Find subscriptions where `trial_ends_at < now()` and `status='trialing'` → set `status='expired'`.
+
+## 6. Upgrade page (`/upgrade`)
+
+New public-after-auth page showing Starter and Growth cards (reusing pricing styles). Buttons currently mark the subscription as `active` with chosen plan (placeholder — real payment integration can be wired later via Stripe/Paddle when the user is ready).
+
+## Technical details
+
+- New migration adds the columns, updates the trigger, creates `get_plan_limits()`, backfills, and registers the `pg_cron` job pointing at the new edge function.
+- New edge function: `supabase/functions/trial-reminder-cron/index.ts`.
+- Email setup uses `email_domain--setup_email_infra` + `email_domain--scaffold_transactional_email`; requires the user to add a sender domain via the email setup dialog before reminders can actually send (in-app popup works without it).
+- New files: `src/hooks/usePlanAccess.tsx`, `src/components/TrialReminderDialog.tsx`, `src/pages/UpgradePage.tsx`. Edits: `ProtectedRoute`, `DashboardLayout`, `App.tsx` routes, `CustomersPage` (quota check), `OnboardingPage` (location cap), `SettingsPage` (billing section).
+
+## Out of scope
+
+Real card processing — buttons will toggle the plan in DB as a stub. Connect Stripe/Paddle later when you're ready.
