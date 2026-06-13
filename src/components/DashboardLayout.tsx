@@ -138,7 +138,7 @@ function SignOutButton({ collapsed }: { collapsed: boolean }) {
 
 const DashboardLayout = () => {
   const { data: business, isLoading } = useBusiness();
-  const { isLoading: planLoading, hasAccess } = usePlanAccess();
+  const { isLoading: planLoading, hasAccess, isTrialing, daysLeft } = usePlanAccess();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -178,6 +178,13 @@ const DashboardLayout = () => {
           <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/80 backdrop-blur-sm px-4">
             <SidebarTrigger />
             <div className="flex-1" />
+            {isTrialing && (
+              <Link to="/upgrade" className="hidden sm:inline-flex">
+                <PlanBadge variant={daysLeft <= 2 ? "destructive" : "secondary"} className="cursor-pointer">
+                  Trial: {daysLeft} day{daysLeft === 1 ? "" : "s"} left · Upgrade
+                </PlanBadge>
+              </Link>
+            )}
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
                 {initials}
