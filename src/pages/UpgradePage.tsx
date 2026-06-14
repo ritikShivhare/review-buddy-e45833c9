@@ -1,11 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Star, ArrowLeft } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import { usePlanAccess } from "@/hooks/usePlanAccess";
 
 const plans = [
@@ -40,28 +36,7 @@ const plans = [
 ];
 
 const UpgradePage = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { isTrialing, daysLeft, isExpired, refetch } = usePlanAccess();
-
-  const upgrade = useMutation({
-    mutationFn: async (planId: string) => {
-      if (!user) throw new Error("Not signed in");
-      const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-      const { error } = await supabase
-        .from("subscriptions")
-        .update({ plan: planId, status: "active", current_period_end: periodEnd.toISOString() })
-        .eq("user_id", user.id);
-      if (error) throw error;
-    },
-    onSuccess: async (_, planId) => {
-      toast.success(`Welcome to the ${planId === "starter" ? "Starter" : "Growth"} plan!`);
-      await refetch();
-      navigate("/dashboard");
-    },
-    onError: (e: any) => toast.error(e.message || "Upgrade failed"),
-  });
+  const { isTrialing, daysLeft, isExpired } = usePlanAccess();
 
   return (
     <div className="min-h-screen bg-secondary/30 p-4 py-12">
@@ -111,11 +86,15 @@ const UpgradePage = () => {
                   className="mt-6 w-full"
                   size="lg"
                   variant={p.popular ? "default" : "outline"}
-                  disabled={upgrade.isPending}
-                  onClick={() => upgrade.mutate(p.id)}
+                  asChild
                 >
-                  {upgrade.isPending ? "Activating..." : `Choose ${p.name}`}
+                  <a href="mailto:support@review-flow.store?subject=Upgrade%20to%20{p.name}">
+                    Contact sales to activate {p.name}
+                  </a>
                 </Button>
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  Payments are processed securely. Your plan will activate after payment confirmation.
+                </p>
               </CardContent>
             </Card>
           ))}
