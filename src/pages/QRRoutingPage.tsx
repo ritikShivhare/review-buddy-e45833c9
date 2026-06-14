@@ -3,54 +3,63 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Star, MessageSquare, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Star, MessageSquare, ExternalLink, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 const QRRoutingPage = () => {
   const { businessId } = useParams<{ businessId: string }>();
   const [business, setBusiness] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({ name: "", phone: "", message: "" });
 
   useEffect(() => {
     if (!businessId) return;
-    const fetchBusiness = async () => {
-      // Only fetches safe public fields (name, google review URL) via a security-definer RPC.
-      // Manager phone is NOT exposed publicly — it's fetched on demand when filing a complaint.
+    (async () => {
       const { data, error } = await supabase
         .rpc("get_public_business", { _business_id: businessId })
         .maybeSingle();
-      if (error || !data) {
-        setError("Business not found");
-      } else {
-        setBusiness(data);
-      }
+      if (error || !data) setError("Business not found");
+      else setBusiness(data);
       setLoading(false);
-    };
-    fetchBusiness();
+    })();
   }, [businessId]);
 
-  const handleComplaint = async (e: React.MouseEvent) => {
+  const submitComplaint = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!businessId) return;
-    const { data } = await supabase
-      .rpc("get_complaint_destination", { _business_id: businessId })
-      .maybeSingle();
-    if (!data?.manager_phone) {
-      setError("Unable to start complaint chat");
+    if (!form.phone.trim() || !form.message.trim()) {
+      toast.error("Phone and message are required");
       return;
     }
-    // Record the complaint so it shows in the owner's dashboard in real-time.
-    await supabase.rpc("file_complaint", {
-      _business_id: businessId,
-      _complaint_text: "Complaint filed via QR — details sent on WhatsApp",
-    });
-    const phone = data.manager_phone.replace(/[\s+\-()]/g, "");
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(
-      `Hi ${data.business_name}, I have a complaint regarding your service. [Briefly describe your issue here].`
-    )}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
+    setSubmitting(true);
+    try {
+      const { data: complaintId, error: rpcErr } = await supabase.rpc("file_complaint", {
+        _business_id: businessId,
+        _customer_name: form.name || "Anonymous",
+        _customer_phone: form.phone,
+        _complaint_text: form.message,
+      });
+      if (rpcErr || !complaintId) throw rpcErr ?? new Error("Failed to file complaint");
 
+      const { error: waErr } = await supabase.functions.invoke("send-whatsapp", {
+        body: { complaint_id: complaintId, body: form.message, side: "customer" },
+      });
+      if (waErr) console.warn("WhatsApp send failed", waErr);
+
+      setSubmitted(true);
+    } catch (err: any) {
+      toast.error(err.message ?? "Could not submit complaint");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -86,37 +95,73 @@ const QRRoutingPage = () => {
           <p className="mt-1 text-sm text-muted-foreground">How was your experience?</p>
         </div>
 
-        <div className="space-y-4">
-          <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-primary/20">
-            <CardContent className="p-0">
-              <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-6">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                  <Star className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">Leave a Review</h3>
-                  <p className="text-sm text-muted-foreground">Share your experience on Google</p>
-                </div>
-                <ExternalLink className="h-5 w-5 text-muted-foreground" />
-              </a>
+        {submitted ? (
+          <Card className="shadow-lg">
+            <CardContent className="p-8 text-center space-y-3">
+              <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
+              <h3 className="font-semibold text-foreground">Complaint received</h3>
+              <p className="text-sm text-muted-foreground">
+                We've notified {business.business_name} on WhatsApp. They'll reply to your number shortly.
+              </p>
             </CardContent>
           </Card>
+        ) : showForm ? (
+          <Card className="shadow-lg">
+            <CardContent className="p-6">
+              <form className="space-y-4" onSubmit={submitComplaint}>
+                <div className="space-y-1.5">
+                  <Label htmlFor="name">Your name (optional)</Label>
+                  <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone">WhatsApp number *</Label>
+                  <Input id="phone" placeholder="+91 98765 43210" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="msg">Your complaint *</Label>
+                  <Textarea id="msg" rows={4} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} required />
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="ghost" className="flex-1" onClick={() => setShowForm(false)}>Cancel</Button>
+                  <Button type="submit" className="flex-1" disabled={submitting}>
+                    {submitting ? "Sending…" : "Send"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-primary/20">
+              <CardContent className="p-0">
+                <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-6">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    <Star className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">Leave a Review</h3>
+                    <p className="text-sm text-muted-foreground">Share your experience on Google</p>
+                  </div>
+                  <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                </a>
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-destructive/20">
-            <CardContent className="p-0">
-              <a href="#" onClick={handleComplaint} className="flex items-center gap-4 p-6">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
-                  <MessageSquare className="h-6 w-6 text-destructive" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">File a Complaint</h3>
-                  <p className="text-sm text-muted-foreground">Chat with us on WhatsApp</p>
-                </div>
-                <ExternalLink className="h-5 w-5 text-muted-foreground" />
-              </a>
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer border-destructive/20">
+              <CardContent className="p-0">
+                <button onClick={() => setShowForm(true)} className="flex w-full items-center gap-4 p-6 text-left">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
+                    <MessageSquare className="h-6 w-6 text-destructive" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">File a Complaint</h3>
+                    <p className="text-sm text-muted-foreground">Chat with us privately on WhatsApp</p>
+                  </div>
+                </button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <p className="mt-8 text-center text-xs text-muted-foreground">Powered by ReviewFlow</p>
       </div>
