@@ -50,6 +50,41 @@ export type Database = {
         }
         Relationships: []
       }
+      complaint_messages: {
+        Row: {
+          body: string
+          complaint_id: string
+          created_at: string
+          direction: string
+          id: string
+          twilio_sid: string | null
+        }
+        Insert: {
+          body: string
+          complaint_id: string
+          created_at?: string
+          direction: string
+          id?: string
+          twilio_sid?: string | null
+        }
+        Update: {
+          body?: string
+          complaint_id?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          twilio_sid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaint_messages_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       complaints: {
         Row: {
           business_id: string
@@ -271,6 +306,10 @@ export type Database = {
           google_review_url: string
           id: string
         }[]
+      }
+      submit_complaint_message: {
+        Args: { _body: string; _complaint_id: string }
+        Returns: string
       }
     }
     Enums: {
