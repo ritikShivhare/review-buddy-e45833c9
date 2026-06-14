@@ -131,6 +131,12 @@ const ComplaintsPage = () => {
           })}
         </div>
       )}
+      <ComplaintThread
+        complaintId={openThread?.id ?? null}
+        customerName={openThread?.name}
+        open={!!openThread}
+        onOpenChange={(v) => !v && setOpenThread(null)}
+      />
     </div>
   );
 };
