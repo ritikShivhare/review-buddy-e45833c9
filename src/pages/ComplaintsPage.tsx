@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/hooks/useBusiness";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import ComplaintThread from "@/components/ComplaintThread";
 
 const statusConfig = {
   new: { label: "Open", variant: "destructive" as const, icon: AlertTriangle },
@@ -17,6 +18,7 @@ const statusConfig = {
 const ComplaintsPage = () => {
   const { data: business } = useBusiness();
   const queryClient = useQueryClient();
+  const [openThread, setOpenThread] = useState<{ id: string; name: string } | null>(null);
 
   const { data: complaints = [], isLoading } = useQuery({
     queryKey: ["complaints", business?.id],
@@ -57,9 +59,8 @@ const ComplaintsPage = () => {
     },
   });
 
-  const sendApology = (id: string) => {
-    updateStatus.mutate({ id, status: "contacted" });
-    toast.success("Apology sent via WhatsApp");
+  const openChat = (id: string, name: string) => {
+    setOpenThread({ id, name });
   };
 
   const markResolved = (id: string) => {
@@ -114,11 +115,9 @@ const ComplaintsPage = () => {
                       {c.customer_phone && <p className="mt-1 text-xs text-muted-foreground tabular-nums">{c.customer_phone}</p>}
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      {c.status === "new" && (
-                        <Button size="sm" variant="secondary" onClick={() => sendApology(c.id)}>
-                          <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Send Apology
-                        </Button>
-                      )}
+                      <Button size="sm" variant="secondary" onClick={() => openChat(c.id, c.customer_name)}>
+                        <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Chat
+                      </Button>
                       {c.status !== "resolved" && (
                         <Button size="sm" variant="outline" onClick={() => markResolved(c.id)}>
                           <CheckCircle className="mr-1.5 h-3.5 w-3.5" /> Resolve
@@ -132,6 +131,12 @@ const ComplaintsPage = () => {
           })}
         </div>
       )}
+      <ComplaintThread
+        complaintId={openThread?.id ?? null}
+        customerName={openThread?.name}
+        open={!!openThread}
+        onOpenChange={(v) => !v && setOpenThread(null)}
+      />
     </div>
   );
 };
