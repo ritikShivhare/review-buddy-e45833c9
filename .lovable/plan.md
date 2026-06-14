@@ -1,83 +1,60 @@
-## Goal
+## 1. Make onboarding optional after signup
 
-Every new signup gets an automatic 14-day Starter trial. Plans differ only by usage caps. Users get email + in-app reminders 2 days and 1 day before expiry. After expiry with no paid plan, the dashboard is locked behind a paywall.
+- Add a **"Skip for now"** button on `OnboardingPage` that navigates straight to `/dashboard`.
+- Stop forcing onboarding: today the dashboard route only loads, but if no business exists, parts of Settings/QR break. Show a soft banner on dashboard pages when `business` is missing: *"Complete your business info in Settings → Business Info to start collecting reviews."*
+- `Settings → Business Info` already exists and is editable; if no business row exists yet, switch the **Save** mutation from `update` to `upsert` so the first save from Settings creates the row.
 
-## Plan tiers (caps-only)
+## 2. Auto-redirect already-registered users
 
-| Capability | Trial (14d) | Starter ₹499/mo | Growth ₹1,499/mo |
-|---|---|---|---|
-| Review requests / month | 50 | 500 | Unlimited |
-| Business locations | 1 | 1 | Unlimited |
-| Team members | 1 | 1 | Unlimited |
-| All features (dashboard, CSV import/export, QR, complaints, WhatsApp, templates, analytics) | ✓ | ✓ | ✓ |
+- `SignInPage` and `SignUpPage`: if `useAuth().user` exists and not loading, `<Navigate to="/dashboard" replace />`. Same guard on `/onboarding` already redirects if business exists — keep it but allow the page to render with a Skip option (see step 1).
+- `LandingPage` header CTAs already link to /sign-up; no change.
 
-All feature pages stay open for every plan. Only the numeric caps are enforced.
+## 3. Remove the video/preview mock on landing page
 
-## 1. Database changes
+- Delete the entire `{/* Product Preview */}` section (the "See ReviewFlow in action" block with the fake browser frame, roughly lines 235–275 of `src/pages/LandingPage.tsx`).
 
-Extend `subscriptions` table:
-- `trial_started_at timestamptz`
-- `trial_ends_at timestamptz`
-- `reminder_2d_sent_at timestamptz`
-- `reminder_1d_sent_at timestamptz`
-- `status` values: `trialing` | `active` | `expired` | `canceled`
+## 4. Complaints not appearing + no WhatsApp message received
 
-Update `handle_new_user()` trigger so every new auth user gets a row with `plan='trial'`, `status='trialing'`, `trial_started_at=now()`, `trial_ends_at=now()+14 days`.
+Two separate problems are bundled here:
 
-Add helper SQL function `get_plan_limits(plan text)` returning `{ max_requests_per_month, max_locations, max_team }`.
+### 4a. Complaint not showing in dashboard
+The QR page already calls `file_complaint` RPC so a row IS inserted into `complaints`. The dashboard list likely just isn't refreshing. Fix:
+- Add Supabase **Realtime** subscription on `public.complaints` filtered by `business_id`, and `ALTER PUBLICATION supabase_realtime ADD TABLE public.complaints` via migration. Dashboard + Complaints page will then update live.
+- Also invalidate the React Query cache on focus.
 
-Backfill: existing users on `plan='free'` get a trial window starting from their `created_at`.
+### 4b. No WhatsApp message arrives on the business owner's phone
+Today the complaint button opens a `wa.me` deep link on the **customer's** phone with a prefilled message — the customer still has to tap **Send**, and there is no inbound channel that puts the conversation into your dashboard. That is why nothing appears in your WhatsApp.
 
-## 2. Access control
+To get a real two-way chat we need to switch from `wa.me` links to the **WhatsApp Business API via Twilio** (already documented as our messaging provider). Proposed flow:
 
-New hook `usePlanAccess()` returns `{ plan, status, trialEndsAt, daysLeft, isExpired, limits }`.
+```text
+Customer scans QR → /r/:businessId
+   ↓ taps "File a complaint"
+Form on the page (name, phone, message) — no wa.me link
+   ↓ submit
+Edge function `send-complaint`:
+  • insert row in complaints
+  • Twilio API → send WhatsApp to manager_phone
+   ↓
+Twilio inbound webhook `whatsapp-webhook`:
+  • append every reply to a new `complaint_messages` table
+   ↓
+Dashboard → Complaints → open thread → live chat (Realtime)
+   ↓ owner types reply → edge function → Twilio → customer's WhatsApp
+```
 
-`ProtectedRoute` (and `DashboardLayout`) reads this:
-- `status === 'trialing'` and `daysLeft >= 0` → allow.
-- `status === 'active'` (starter/growth) → allow.
-- Otherwise → redirect to new `/upgrade` page (paywall) showing Starter/Growth cards and a "Choose a Plan" CTA. No dashboard route renders.
+New pieces:
+- `complaint_messages` table (`id, complaint_id, direction in ('in','out'), body, created_at`) with RLS scoped to the owning business, plus realtime publication.
+- Edge functions `send-complaint` and `whatsapp-webhook` (Twilio signature verified).
+- Connect the **Twilio** connector (requires you to provide Account SID + API key, and a WhatsApp-enabled sender or sandbox number).
+- New `ComplaintThread` UI inside the Complaints page with message list + reply input.
 
-Settings page gets a "Billing" section showing current plan, trial countdown, and upgrade buttons.
+### What I need from you before building 4b
+- Confirm you want the full Twilio two-way chat (otherwise we keep the `wa.me` link and only fix 4a).
+- A Twilio account with WhatsApp sender enabled (sandbox is fine for testing).
 
-## 3. Cap enforcement (where caps actually matter)
+## Technical notes
 
-- **Add customer / send review request**: count this calendar month's requests for the business; if `>= max_requests_per_month`, block with a toast linking to `/upgrade`.
-- **Onboarding / add location**: hide multi-location UI unless Growth.
-- **Team members**: hide invite UI unless Growth (placeholder page is fine for now).
-
-CSV export, QR, complaints, WhatsApp messaging, templates, analytics stay available to everyone with an active plan or trial.
-
-## 4. In-app reminder popup
-
-New `<TrialReminderDialog />` mounted in `DashboardLayout`. Shows once per day when `daysLeft <= 2 && status === 'trialing'`:
-- Headline: "Only {n} day(s) left in your free trial"
-- CTA buttons: "Upgrade to Starter" / "Upgrade to Growth" → `/upgrade`
-- "Remind me later" stores dismissal in `localStorage` keyed by date.
-
-## 5. Reminder emails (Lovable Emails)
-
-Set up Lovable Cloud email infrastructure with a sender domain, then scaffold two app email templates:
-- `trial-reminder-2d` — "2 days left in your ReviewFlow trial"
-- `trial-reminder-1d` — "Last day of your ReviewFlow trial"
-
-Both branded with the green/white aesthetic and a CTA button linking to `/upgrade`.
-
-New scheduled edge function `trial-reminder-cron` runs hourly via `pg_cron`:
-1. Find subscriptions where `status='trialing'` and `trial_ends_at` is between 47-48h from now and `reminder_2d_sent_at IS NULL` → enqueue `trial-reminder-2d`, stamp `reminder_2d_sent_at`.
-2. Same for 23-24h window → `trial-reminder-1d`.
-3. Find subscriptions where `trial_ends_at < now()` and `status='trialing'` → set `status='expired'`.
-
-## 6. Upgrade page (`/upgrade`)
-
-New public-after-auth page showing Starter and Growth cards (reusing pricing styles). Buttons currently mark the subscription as `active` with chosen plan (placeholder — real payment integration can be wired later via Stripe/Paddle when the user is ready).
-
-## Technical details
-
-- New migration adds the columns, updates the trigger, creates `get_plan_limits()`, backfills, and registers the `pg_cron` job pointing at the new edge function.
-- New edge function: `supabase/functions/trial-reminder-cron/index.ts`.
-- Email setup uses `email_domain--setup_email_infra` + `email_domain--scaffold_transactional_email`; requires the user to add a sender domain via the email setup dialog before reminders can actually send (in-app popup works without it).
-- New files: `src/hooks/usePlanAccess.tsx`, `src/components/TrialReminderDialog.tsx`, `src/pages/UpgradePage.tsx`. Edits: `ProtectedRoute`, `DashboardLayout`, `App.tsx` routes, `CustomersPage` (quota check), `OnboardingPage` (location cap), `SettingsPage` (billing section).
-
-## Out of scope
-
-Real card processing — buttons will toggle the plan in DB as a stub. Connect Stripe/Paddle later when you're ready.
+- Files touched: `src/pages/OnboardingPage.tsx`, `src/pages/SignInPage.tsx`, `src/pages/SignUpPage.tsx`, `src/pages/LandingPage.tsx`, `src/pages/SettingsPage.tsx` (upsert), `src/pages/ComplaintsPage.tsx`, `src/pages/DashboardPage.tsx`, `src/hooks/useBusiness.tsx` (upsert mutation).
+- New: `supabase/functions/send-complaint`, `supabase/functions/whatsapp-webhook`, migration for `complaint_messages` + realtime publication.
+- No schema change for steps 1–3.

@@ -232,46 +232,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Product Preview */}
-      <section className="py-20 lg:py-28">
-        <div className="container">
-          <AnimatedSection className="text-center">
-            <h2 className="text-3xl font-bold text-foreground sm:text-4xl">See ReviewFlow in action</h2>
-            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-              Manage all your customer feedback from one simple dashboard.
-            </p>
-          </AnimatedSection>
-          <AnimatedSection delay={150} className="mt-12">
-            <div className="relative mx-auto max-w-5xl">
-              <div className="relative overflow-hidden rounded-2xl border bg-card shadow-2xl ring-1 ring-primary/10">
-                {/* Browser chrome */}
-                <div className="flex items-center gap-2 border-b bg-secondary/60 px-4 py-3">
-                  <div className="flex gap-1.5">
-                    <div className="h-3 w-3 rounded-full bg-destructive/70" />
-                    <div className="h-3 w-3 rounded-full bg-yellow-400/80" />
-                    <div className="h-3 w-3 rounded-full bg-primary/70" />
-                  </div>
-                  <div className="ml-4 text-xs text-muted-foreground">app.reviewflow.in/dashboard</div>
-                </div>
-                {/* Placeholder content */}
-                <div className="relative aspect-video w-full bg-gradient-to-br from-secondary via-background to-secondary/40 flex items-center justify-center">
-                  <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, hsl(var(--primary)) 1px, transparent 0)", backgroundSize: "24px 24px" }} />
-                  <div className="relative flex flex-col items-center gap-3 text-center px-6">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-                      <LayoutDashboard className="h-9 w-9" aria-hidden="true" />
-                    </div>
-                    <span className="text-sm font-semibold text-foreground">Your reviews dashboard</span>
-                    <span className="text-xs text-muted-foreground max-w-xs">Track ratings, requests and complaints in real time.</span>
-                  </div>
-                </div>
-              </div>
-              <p className="mt-6 text-center text-sm text-muted-foreground">
-                Manage all your customer feedback from one simple dashboard.
-              </p>
-            </div>
-          </AnimatedSection>
-        </div>
-      </section>
 
 
       {/* How it works */}

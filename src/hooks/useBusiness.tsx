@@ -40,10 +40,36 @@ export function useUpdateBusiness() {
   return useMutation({
     mutationFn: async (updates: Partial<Business>) => {
       if (!user) throw new Error("Not authenticated");
+      // Check whether a business row exists for this user
+      const { data: existing } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (existing) {
+        const { data, error } = await supabase
+          .from("businesses")
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq("user_id", user.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      }
+
+      // First save → insert. Require a business name.
+      const insertPayload = {
+        user_id: user.id,
+        business_name: updates.business_name?.trim() || "My Business",
+        manager_phone: updates.manager_phone?.trim() || "",
+        google_review_url: updates.google_review_url ?? null,
+        address: updates.address ?? null,
+        apology_offer: updates.apology_offer ?? null,
+      };
       const { data, error } = await supabase
         .from("businesses")
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq("user_id", user.id)
+        .insert(insertPayload)
         .select()
         .single();
       if (error) throw error;
