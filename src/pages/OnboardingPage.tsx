@@ -33,6 +33,8 @@ const OnboardingPage = () => {
   if (!user) return <Navigate to="/sign-in" replace />;
   if (existingBusiness) return <Navigate to="/dashboard" replace />;
 
+  const handleSkip = () => navigate("/dashboard");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.businessName || !form.managerPhone) {
@@ -87,6 +89,9 @@ const OnboardingPage = () => {
               </div>
               <Button type="submit" className="w-full" size="lg" disabled={createBusiness.isPending}>
                 {createBusiness.isPending ? "Setting up..." : "Continue to Dashboard"} <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+              <Button type="button" variant="ghost" className="w-full" onClick={handleSkip}>
+                Skip for now — I'll set this up later
               </Button>
             </form>
           </CardContent>

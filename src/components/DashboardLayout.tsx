@@ -142,12 +142,6 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && !business) {
-      navigate("/onboarding");
-    }
-  }, [isLoading, business, navigate]);
-
-  useEffect(() => {
     if (!planLoading && !hasAccess) {
       navigate("/upgrade", { replace: true });
     }
@@ -189,10 +183,21 @@ const DashboardLayout = () => {
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
                 {initials}
               </div>
-              <span className="hidden text-sm font-medium text-foreground sm:block">{business?.business_name}</span>
+              <span className="hidden text-sm font-medium text-foreground sm:block">{business?.business_name || "Set up business"}</span>
             </div>
           </header>
           <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            {!business && (
+              <div className="mb-6 flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Finish setting up your business</p>
+                  <p className="text-xs text-muted-foreground">Add your business info to generate your QR code and start collecting reviews.</p>
+                </div>
+                <Link to="/dashboard/settings" className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                  Complete setup
+                </Link>
+              </div>
+            )}
             <Outlet />
           </main>
           <TrialReminderDialog />
