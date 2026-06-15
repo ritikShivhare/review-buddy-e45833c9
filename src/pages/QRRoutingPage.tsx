@@ -131,6 +131,24 @@ const QRRoutingPage = () => {
             <CardContent className="p-6">
               <form className="space-y-4" onSubmit={submitComplaint}>
                 <div className="space-y-1.5">
+                  <Label>Rate your experience *</Label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setForm({ ...form, rating: n })}
+                        className="p-1"
+                        aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                      >
+                        <Star
+                          className={`h-7 w-7 ${n <= form.rating ? "fill-destructive text-destructive" : "text-border"}`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
                   <Label htmlFor="name">Your name (optional)</Label>
                   <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
