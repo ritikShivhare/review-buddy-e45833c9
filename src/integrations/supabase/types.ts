@@ -394,15 +394,26 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
-      file_complaint: {
-        Args: {
-          _business_id: string
-          _complaint_text?: string
-          _customer_name?: string
-          _customer_phone?: string
-        }
-        Returns: string
-      }
+      file_complaint:
+        | {
+            Args: {
+              _business_id: string
+              _complaint_text?: string
+              _customer_name?: string
+              _customer_phone?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _business_id: string
+              _complaint_text?: string
+              _customer_name?: string
+              _customer_phone?: string
+              _rating?: number
+            }
+            Returns: string
+          }
       get_complaint_destination: {
         Args: { _business_id: string }
         Returns: {

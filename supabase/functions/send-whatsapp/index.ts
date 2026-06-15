@@ -15,7 +15,7 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const waFrom = TWILIO_FROM.startsWith("whatsapp:") ? TWILIO_FROM : `whatsapp:${TWILIO_FROM}`;
 
 function normalizePhone(p: string) {
-  const cleaned = p.replace(/[\s\-()]/g, "");
+  const cleaned = p.trim().replace(/[\s\-()]/g, "");
   return cleaned.startsWith("+") ? cleaned : `+${cleaned}`;
 }
 
@@ -30,7 +30,12 @@ async function sendTwilio(to: string, body: string) {
     body: new URLSearchParams({ To: `whatsapp:${normalizePhone(to)}`, From: waFrom, Body: body }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(`Twilio ${res.status}: ${JSON.stringify(data)}`);
+  if (!res.ok) {
+    console.error("Twilio send failed", { status: res.status, data });
+    const msg = data?.message || data?.error || `Twilio ${res.status}`;
+    throw new Error(msg);
+  }
+  console.log("Twilio send ok", { sid: data.sid, to });
   return data;
 }
 
@@ -82,8 +87,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("send-whatsapp error", e);
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 400,
+    return new Response(JSON.stringify({ ok: false, error: e.message }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
