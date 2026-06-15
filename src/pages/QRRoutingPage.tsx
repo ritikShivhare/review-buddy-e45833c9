@@ -17,7 +17,7 @@ const QRRoutingPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ name: "", phone: "", message: "" });
+  const [form, setForm] = useState({ name: "", phone: "", message: "", rating: 0 });
 
   useEffect(() => {
     if (!businessId) return;
@@ -31,11 +31,27 @@ const QRRoutingPage = () => {
     })();
   }, [businessId]);
 
+  const normalizePhone = (raw: string) => {
+    const digits = raw.replace(/[^\d+]/g, "");
+    if (digits.startsWith("+")) return digits;
+    if (digits.length === 10) return `+91${digits}`;
+    return `+${digits}`;
+  };
+
   const submitComplaint = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!businessId) return;
+    if (form.rating < 1) {
+      toast.error("Please tap a star to rate your experience");
+      return;
+    }
     if (!form.phone.trim() || !form.message.trim()) {
       toast.error("Phone and message are required");
+      return;
+    }
+    const phone = normalizePhone(form.phone);
+    if (phone.replace(/\D/g, "").length < 10) {
+      toast.error("Please enter a valid phone number");
       return;
     }
     setSubmitting(true);
@@ -43,15 +59,20 @@ const QRRoutingPage = () => {
       const { data: complaintId, error: rpcErr } = await supabase.rpc("file_complaint", {
         _business_id: businessId,
         _customer_name: form.name || "Anonymous",
-        _customer_phone: form.phone,
+        _customer_phone: phone,
         _complaint_text: form.message,
+        _rating: form.rating,
       });
       if (rpcErr || !complaintId) throw rpcErr ?? new Error("Failed to file complaint");
 
-      const { error: waErr } = await supabase.functions.invoke("send-whatsapp", {
+      const { data: waData, error: waErr } = await supabase.functions.invoke("send-whatsapp", {
         body: { complaint_id: complaintId, body: form.message, side: "customer" },
       });
-      if (waErr) console.warn("WhatsApp send failed", waErr);
+      if (waErr) {
+        toast.warning("Complaint saved. WhatsApp notification failed to send.");
+      } else if (waData && waData.ok === false) {
+        toast.warning(`Complaint saved. WhatsApp: ${waData.error ?? "delivery failed"}`);
+      }
 
       setSubmitted(true);
     } catch (err: any) {
