@@ -56,7 +56,10 @@ export type Database = {
           complaint_id: string
           created_at: string
           direction: string
+          error_code: string | null
+          error_message: string | null
           id: string
+          status: string
           twilio_sid: string | null
         }
         Insert: {
@@ -64,7 +67,10 @@ export type Database = {
           complaint_id: string
           created_at?: string
           direction: string
+          error_code?: string | null
+          error_message?: string | null
           id?: string
+          status?: string
           twilio_sid?: string | null
         }
         Update: {
@@ -72,7 +78,10 @@ export type Database = {
           complaint_id?: string
           created_at?: string
           direction?: string
+          error_code?: string | null
+          error_message?: string | null
           id?: string
+          status?: string
           twilio_sid?: string | null
         }
         Relationships: [
@@ -94,6 +103,7 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           id: string
+          last_inbound_at: string | null
           rating: number | null
           resolved_at: string | null
           status: string | null
@@ -106,6 +116,7 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           id?: string
+          last_inbound_at?: string | null
           rating?: number | null
           resolved_at?: string | null
           status?: string | null
@@ -118,6 +129,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           id?: string
+          last_inbound_at?: string | null
           rating?: number | null
           resolved_at?: string | null
           status?: string | null

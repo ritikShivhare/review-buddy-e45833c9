@@ -55,12 +55,12 @@ const ComplaintThread = ({ complaintId, open, onOpenChange, customerName }: Prop
   const send = async () => {
     if (!complaintId || !text.trim()) return;
     setSending(true);
-    const { error } = await supabase.functions.invoke("send-whatsapp", {
+    const { data, error } = await supabase.functions.invoke("send-whatsapp", {
       body: { complaint_id: complaintId, body: text.trim(), side: "owner" },
     });
     setSending(false);
-    if (error) {
-      toast.error("Failed to send WhatsApp message");
+    if (error || (data && data.ok === false)) {
+      toast.error(data?.error || "Failed to send WhatsApp message");
       return;
     }
     setText("");
@@ -79,10 +79,15 @@ const ComplaintThread = ({ complaintId, open, onOpenChange, customerName }: Prop
             ) : (
               messages.map((m: any) => (
                 <div key={m.id} className={`flex ${m.direction === "out" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${m.direction === "out" ? "bg-primary text-primary-foreground" : "bg-card border"}`}>
+                  <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${m.direction === "out" ? "bg-primary text-primary-foreground" : "bg-card border"} ${m.status === "failed" ? "opacity-80 ring-1 ring-destructive" : ""}`}>
                     {m.body}
-                    <div className="mt-1 text-[10px] opacity-70">
-                      {new Date(m.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                    <div className="mt-1 flex items-center gap-1.5 text-[10px] opacity-70">
+                      <span>{new Date(m.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>
+                      {m.status === "failed" && (
+                        <span className="rounded bg-destructive px-1 py-0.5 text-[9px] font-semibold text-destructive-foreground" title={m.error_message || "Delivery failed"}>
+                          delivery failed
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
