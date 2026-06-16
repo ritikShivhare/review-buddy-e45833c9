@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, QrCode, Download, Sparkles } from "lucide-react";
+import { Save, QrCode, Download, Sparkles, Copy, MessageCircle } from "lucide-react";
 import { useBusiness, useUpdateBusiness } from "@/hooks/useBusiness";
 import { usePlanAccess } from "@/hooks/usePlanAccess";
 import { QRCodeSVG } from "qrcode.react";
@@ -93,6 +93,7 @@ const SettingsPage = () => {
           <TabsTrigger value="business">Business Info</TabsTrigger>
           <TabsTrigger value="templates">Message Templates</TabsTrigger>
           <TabsTrigger value="qr">QR Code</TabsTrigger>
+          <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
         </TabsList>
@@ -177,6 +178,46 @@ const SettingsPage = () => {
                 <Button variant="outline" onClick={handleDownloadQR} disabled={!qrUrl}>
                   <Download className="mr-1.5 h-4 w-4" /> Download PNG
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="whatsapp">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MessageCircle className="h-4 w-4 text-primary" /> WhatsApp Business Setup
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div>
+                <Label>Twilio Incoming-Message Webhook URL</Label>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">
+                  In Twilio Console → Messaging → Senders → your WhatsApp Sender → set the "When a message comes in" webhook to this URL (HTTP POST):
+                </p>
+                <div className="flex gap-2">
+                  <Input readOnly value="https://yvyuqqkejfxtftwpgijt.functions.supabase.co/whatsapp-webhook" className="font-mono text-xs" />
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText("https://yvyuqqkejfxtftwpgijt.functions.supabase.co/whatsapp-webhook");
+                      toast.success("Webhook URL copied");
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-md border bg-muted/30 p-4 text-sm space-y-2">
+                <p className="font-semibold text-foreground">Production checklist</p>
+                <ol className="list-decimal pl-5 space-y-1 text-muted-foreground text-xs">
+                  <li>Complete Facebook Business Verification at business.facebook.com.</li>
+                  <li>In Twilio Console, register a WhatsApp Sender (1–3 days approval).</li>
+                  <li>Submit two message templates for approval: owner-notification and customer-acknowledgement.</li>
+                  <li>Once approved, share with us: sender E.164 number + the two Content SIDs (HX…).</li>
+                  <li>Paste the webhook URL above into the Sender's "incoming messages" setting.</li>
+                </ol>
               </div>
             </CardContent>
           </Card>
