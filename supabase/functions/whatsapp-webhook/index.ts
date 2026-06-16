@@ -79,7 +79,11 @@ Deno.serve(async (req) => {
     }
 
     if (complaintId) {
-      await admin.from("complaint_messages").insert({ complaint_id: complaintId, direction, body, twilio_sid: sid });
+      await admin.from("complaint_messages").insert({ complaint_id: complaintId, direction, body, twilio_sid: sid, status: "sent" });
+      if (direction === "in") {
+        // Customer replied — open/refresh the 24h freeform window.
+        await admin.from("complaints").update({ last_inbound_at: new Date().toISOString() }).eq("id", complaintId);
+      }
       if (direction === "out") {
         await admin.from("complaints").update({ status: "contacted" }).eq("id", complaintId).eq("status", "new");
       }
