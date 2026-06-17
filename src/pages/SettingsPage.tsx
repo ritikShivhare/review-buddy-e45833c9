@@ -210,6 +210,7 @@ const SettingsPage = () => {
                 </div>
               </div>
               <div>
+                <Label>Twilio Incoming-Message Webhook URL</Label>
                 <p className="text-xs text-muted-foreground mt-1 mb-2">
                   In Twilio Console → Messaging → Senders → your WhatsApp Sender → set the "When a message comes in" webhook to this URL (HTTP POST):
                 </p>
