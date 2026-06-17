@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Star, MessageSquare, ExternalLink, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { PhoneInput } from "@/components/PhoneInput";
+import { isValidPhoneNumber } from "libphonenumber-js";
 
 const QRRoutingPage = () => {
   const { businessId } = useParams<{ businessId: string }>();
@@ -31,13 +33,6 @@ const QRRoutingPage = () => {
     })();
   }, [businessId]);
 
-  const normalizePhone = (raw: string) => {
-    const digits = raw.replace(/[^\d+]/g, "");
-    if (digits.startsWith("+")) return digits;
-    if (digits.length === 10) return `+91${digits}`;
-    return `+${digits}`;
-  };
-
   const submitComplaint = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!businessId) return;
@@ -49,11 +44,11 @@ const QRRoutingPage = () => {
       toast.error("Phone and message are required");
       return;
     }
-    const phone = normalizePhone(form.phone);
-    if (phone.replace(/\D/g, "").length < 10) {
+    if (!isValidPhoneNumber(form.phone)) {
       toast.error("Please enter a valid phone number");
       return;
     }
+    const phone = form.phone;
     setSubmitting(true);
     try {
       const { data: complaintId, error: rpcErr } = await supabase.rpc("file_complaint", {
@@ -154,7 +149,7 @@ const QRRoutingPage = () => {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="phone">WhatsApp number *</Label>
-                  <Input id="phone" placeholder="+91 98765 43210" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
+                  <PhoneInput value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="msg">Your complaint *</Label>

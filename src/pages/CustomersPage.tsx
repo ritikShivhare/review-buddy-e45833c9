@@ -6,13 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Send, Star } from "lucide-react";
+import { Plus, Search, Send, RotateCw } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/hooks/useBusiness";
 import { usePlanAccess } from "@/hooks/usePlanAccess";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { PhoneInput } from "@/components/PhoneInput";
+import { isValidPhoneNumber } from "libphonenumber-js";
 
 const CustomersPage = () => {
   const { data: business } = useBusiness();
@@ -42,8 +44,8 @@ const CustomersPage = () => {
   const addCustomer = useMutation({
     mutationFn: async () => {
       if (!business) throw new Error("No business");
-      if (!/^\d{10}$/.test(newPhone)) {
-        throw new Error("Phone must be exactly 10 digits");
+      if (!newPhone || !isValidPhoneNumber(newPhone)) {
+        throw new Error("Please enter a valid phone number");
       }
       if (customers.length >= limits.maxRequests) {
         throw new Error(`QUOTA:Your ${plan} plan allows ${limits.maxRequests} customers. Upgrade for more.`);
@@ -51,7 +53,7 @@ const CustomersPage = () => {
       const { error } = await supabase.from("customers").insert({
         business_id: business.id,
         name: newName.trim(),
-        phone: `+91${newPhone}`,
+        phone: newPhone,
       });
       if (error) throw error;
     },
@@ -77,12 +79,17 @@ const CustomersPage = () => {
   const sendRequest = useMutation({
     mutationFn: async (customer: { id: string; name: string; phone: string }) => {
       if (!business) throw new Error("No business");
-      let phone = customer.phone.replace(/[\s+\-()]/g, "");
-      if (phone.length === 10) phone = "91" + phone;
+      // Phone is stored as E.164 (e.g. +919876543210). wa.me wants digits only, no +.
+      const phone = customer.phone.replace(/\D/g, "");
+      if (phone.length < 8) throw new Error("Customer phone is invalid");
       const link = `${window.location.origin}/r/${business.id}`;
       const msg = `Hi ${customer.name}, thanks for visiting ${business.business_name}! We'd love your feedback: ${link}`;
       const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-      window.open(url, "_blank", "noopener,noreferrer");
+      const win = window.open(url, "_blank", "noopener,noreferrer");
+      if (!win) {
+        await navigator.clipboard.writeText(url).catch(() => {});
+        throw new Error("POPUP_BLOCKED");
+      }
       const { error } = await supabase
         .from("customers")
         .update({ status: "requested" })
@@ -91,9 +98,15 @@ const CustomersPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
-      toast.success("Review request sent");
+      toast.success("WhatsApp opened — tap Send in WhatsApp to deliver the request");
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => {
+      if (err.message === "POPUP_BLOCKED") {
+        toast.error("Popup blocked. WhatsApp link copied to clipboard — paste it in a new tab.");
+      } else {
+        toast.error(err.message);
+      }
+    },
   });
 
   const filtered = customers.filter(
@@ -123,25 +136,14 @@ const CustomersPage = () => {
               </div>
               <div className="space-y-2">
                 <Label>Phone (WhatsApp)</Label>
-                <div className="flex">
-                  <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
-                    +91
-                  </span>
-                  <Input
-                    type="tel"
-                    inputMode="numeric"
-                    placeholder="9876543210"
-                    maxLength={10}
-                    value={newPhone}
-                    onChange={(e) => setNewPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    className="rounded-l-none"
-                  />
-                </div>
-                {newPhone.length > 0 && newPhone.length < 10 && (
-                  <p className="text-xs text-destructive">Enter all 10 digits ({newPhone.length}/10)</p>
-                )}
+                <PhoneInput value={newPhone} onChange={setNewPhone} />
+                <p className="text-xs text-muted-foreground">Pick the country, then enter the number.</p>
               </div>
-              <Button className="w-full" onClick={() => addCustomer.mutate()} disabled={!newName.trim() || newPhone.length !== 10 || addCustomer.isPending}>
+              <Button
+                className="w-full"
+                onClick={() => addCustomer.mutate()}
+                disabled={!newName.trim() || !newPhone || !isValidPhoneNumber(newPhone) || addCustomer.isPending}
+              >
                 {addCustomer.isPending ? "Adding..." : "Add Customer"}
               </Button>
             </div>
@@ -153,6 +155,9 @@ const CustomersPage = () => {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input placeholder="Search by name or phone..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
+      <p className="text-xs text-muted-foreground -mt-3">
+        Tip: <span className="font-medium">Open WhatsApp</span> launches a pre-filled message — review it in WhatsApp and tap Send.
+      </p>
 
       <Card className="shadow-sm">
         <CardContent className="p-0">
@@ -188,7 +193,11 @@ const CustomersPage = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" onClick={() => sendRequest.mutate(c)} disabled={sendRequest.isPending}>
-                        <Send className="mr-1.5 h-3.5 w-3.5" /> Request
+                        {c.status === "requested" ? (
+                          <><RotateCw className="mr-1.5 h-3.5 w-3.5" /> Resend</>
+                        ) : (
+                          <><Send className="mr-1.5 h-3.5 w-3.5" /> Open WhatsApp</>
+                        )}
                       </Button>
                     </TableCell>
 

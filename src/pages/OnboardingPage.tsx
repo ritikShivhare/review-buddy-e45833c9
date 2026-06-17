@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { useCreateBusiness, useBusiness } from "@/hooks/useBusiness";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
+import { PhoneInput } from "@/components/PhoneInput";
+import { isValidPhoneNumber } from "libphonenumber-js";
 
 const OnboardingPage = () => {
   const navigate = useNavigate();
@@ -39,6 +41,10 @@ const OnboardingPage = () => {
     e.preventDefault();
     if (!form.businessName || !form.managerPhone) {
       toast.error("Please fill in required fields");
+      return;
+    }
+    if (!isValidPhoneNumber(form.managerPhone)) {
+      toast.error("Please enter a valid WhatsApp number");
       return;
     }
     try {
@@ -75,7 +81,7 @@ const OnboardingPage = () => {
               </div>
               <div className="space-y-2">
                 <Label>Manager WhatsApp Number *</Label>
-                <Input placeholder="+91 98765 43210" value={form.managerPhone} onChange={(e) => setForm({ ...form, managerPhone: e.target.value })} />
+                <PhoneInput value={form.managerPhone} onChange={(v) => setForm({ ...form, managerPhone: v })} />
                 <p className="text-xs text-muted-foreground">You'll receive complaint alerts here</p>
               </div>
               <div className="space-y-2">

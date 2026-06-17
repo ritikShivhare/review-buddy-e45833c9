@@ -8,10 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, QrCode, Download, Sparkles, Copy, MessageCircle } from "lucide-react";
+import { Save, QrCode, Download, Sparkles, Copy, MessageCircle, AlertCircle } from "lucide-react";
 import { useBusiness, useUpdateBusiness } from "@/hooks/useBusiness";
 import { usePlanAccess } from "@/hooks/usePlanAccess";
 import { QRCodeSVG } from "qrcode.react";
+import { PhoneInput } from "@/components/PhoneInput";
 
 const defaultTemplates = {
   request: `Hello {customer_name}! 👋\n\nThank you for visiting {business_name}!\n\nWe'd love to hear about your experience.\nHow would you rate us?\n\nReply with a number:\n1 ⭐ - Very Poor\n2 ⭐⭐ - Poor\n3 ⭐⭐⭐ - Average\n4 ⭐⭐⭐⭐ - Good\n5 ⭐⭐⭐⭐⭐ - Excellent!`,
@@ -108,7 +109,10 @@ const SettingsPage = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Manager Phone (WhatsApp)</Label>
-                  <Input value={form.manager_phone} onChange={(e) => setForm({ ...form, manager_phone: e.target.value })} />
+                  <PhoneInput
+                    value={form.manager_phone}
+                    onChange={(v) => setForm({ ...form, manager_phone: v })}
+                  />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Google Review URL</Label>
@@ -191,6 +195,20 @@ const SettingsPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-foreground">Current mode: Manual (Click-to-chat)</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Review requests and complaint replies open WhatsApp pre-filled — you tap Send. To enable fully automated sending, complete the Twilio template approval checklist below.
+                    </p>
+                    <Button size="sm" variant="outline" disabled className="mt-3">
+                      Enable automatic sending (templates required)
+                    </Button>
+                  </div>
+                </div>
+              </div>
               <div>
                 <Label>Twilio Incoming-Message Webhook URL</Label>
                 <p className="text-xs text-muted-foreground mt-1 mb-2">
