@@ -157,8 +157,8 @@ export const PhoneInput = ({
     if (!national) return "";
     try {
       const ayt = new AsYouType(country);
-      ayt.input(`+${getCountryCallingCode(country)}${national}`);
-      return ayt.formattedOutput || national;
+      const out = ayt.input(national);
+      return out || national;
     } catch {
       return national;
     }
