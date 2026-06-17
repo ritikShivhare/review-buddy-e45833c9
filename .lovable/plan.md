@@ -1,86 +1,84 @@
-# Plan: Production WhatsApp for B2B Customers
 
-You want real customers (not just sandbox testers) to receive WhatsApp messages. That means moving from Twilio Sandbox to an **approved WhatsApp Business Sender**, and updating the code to handle WhatsApp's 24-hour rule with **approved templates**.
+## Goals
 
----
-
-## Part 1 — What you need to do in Twilio + Meta (one-time, outside the app)
-
-This part I cannot do for you. It needs your Twilio + Facebook Business accounts.
-
-1. **Facebook Business Manager**
-   - Create one at business.facebook.com if you don't have it.
-   - Start **Business Verification** (Meta will ask for company docs: GST certificate, utility bill, or incorporation proof). Usually 1–3 business days.
-
-2. **Twilio Console → Messaging → Senders → WhatsApp senders → Create new sender**
-   - Pick a phone number you own (it must not already be on WhatsApp — if your `+91 9340093116` is on personal WhatsApp, delete that WhatsApp account first, or use a different number).
-   - Choose a display name (e.g. your brand name).
-   - Twilio submits it to Meta for review.
-
-3. **Submit message templates for approval** (Twilio Console → Content Template Builder). We need at least two:
-   - `complaint_received_owner` — notifies the business owner that a customer filed a complaint.
-   - `complaint_ack_customer` — acknowledges the customer that their complaint was received.
-   - Template approval is also 1–3 days. Keep wording transactional, not promotional.
-
-4. Once approved, you'll have:
-   - An **E.164 sender number** (e.g. `+9180XXXXXXXX`)
-   - **Content SIDs** for each template (e.g. `HXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
+1. Every phone input gets a country-code dropdown with full country list, defaulting to **+91 (India)** but auto-detecting from browser locale/timezone when possible. User can change at any time.
+2. Fix the broken "send review request" + "reply to complaint" experience by making it explicit and reliable via WhatsApp click-to-chat (wa.me), with clear UI state and an easy switch to automated Twilio template sends later.
+3. No database schema changes. Phone numbers continue to be stored in E.164 format (`+<countrycode><number>`).
 
 ---
 
-## Part 2 — What I'll change in the app (after you give me the SIDs + sender)
+## 1. Country-code picker component
 
-### 2.1 Update secrets
-- Update `TWILIO_WHATSAPP_FROM` to the approved sender number.
-- Add new secrets:
-  - `TWILIO_TEMPLATE_OWNER_SID` — content SID for owner notification
-  - `TWILIO_TEMPLATE_CUSTOMER_ACK_SID` — content SID for customer acknowledgement
+Create `src/components/PhoneInput.tsx` — a reusable controlled input that returns a full E.164 string (e.g. `+919876543210`).
 
-### 2.2 Update `send-whatsapp` edge function
-Right now it sends freeform text via Twilio. WhatsApp blocks freeform outbound messages outside the 24-hour customer window — that's what would silently fail in production. I'll change it to:
+- Library: install `libphonenumber-js` (small, no native deps) for validation + parsing + country metadata.
+- UI: shadcn `Popover` + `Command` (searchable) on the left, native `Input` on the right. Shows flag emoji + dial code (e.g. 🇮🇳 +91). Search by country name or dial code.
+- Auto-detect default country:
+  1. If a value is already passed in, parse it and use that country.
+  2. Else try `Intl.DateTimeFormat().resolvedOptions().timeZone` → map common Asia/Kolkata, Asia/Dubai, America/*, Europe/* etc. to ISO codes.
+  3. Else `navigator.language` region.
+  4. Fallback: `IN`.
+- Validation: live check via `isValidPhoneNumber`; show inline error.
+- Props: `value`, `onChange(e164 | "")`, `onValidChange?(boolean)`, `defaultCountry?`.
 
-- For the **first outbound** to a user (owner notification when a complaint comes in, or customer ack): send via Twilio **ContentSid + ContentVariables** (approved template).
-- For **replies inside the 24-hour window** (owner → customer chat from `ComplaintThread`): keep freeform text — that's allowed.
-- Track `last_inbound_at` per complaint so we know whether the 24-hour window is open. If a manager replies after 24h of silence, the function returns a clear error telling them to use a template instead of silently failing.
+Replace existing hardcoded "+91" prefix UI in:
+- `src/pages/CustomersPage.tsx` (Add Customer dialog).
+- `src/pages/SettingsPage.tsx` (Manager Phone field — Business Info tab).
+- `src/pages/QRRoutingPage.tsx` (customer complaint form).
+- `src/pages/OnboardingPage.tsx` (if it asks for manager phone — to be confirmed when editing).
 
-### 2.3 Small DB change
-Add a `last_inbound_at timestamptz` column on `complaints`, updated by the `whatsapp-webhook` function whenever a customer message arrives. Used to decide template vs freeform.
-
-### 2.4 Better error surfacing
-- Save the Twilio error code + message into `complaint_messages` (new nullable `error_code`, `error_message` columns) when a send fails, so failures are visible in the dashboard instead of disappearing.
-- Show a small "delivery failed" badge in `ComplaintThread` when a message has an error.
-
-### 2.5 Webhook URL for Twilio
-The `whatsapp-webhook` function is already deployed. After your sender is approved, you'll paste this URL into Twilio's sender config (Incoming Messages webhook):
-`https://yvyuqqkejfxtftwpgijt.functions.supabase.co/whatsapp-webhook`
-I'll surface this URL in the app's Settings page so you can copy it without leaving the dashboard.
+The `normalizePhone` helpers in `QRRoutingPage` and `CustomersPage` will be removed in favor of the already-E.164 value coming from `PhoneInput`.
 
 ---
 
-## Part 3 — Suggested rollout order
+## 2. Review-request "send" flow — make click-to-chat explicit & reliable
 
-1. You start Meta Business Verification + WhatsApp sender request in Twilio today (it's the long pole — 1–3 days).
-2. While waiting, I implement 2.2 / 2.3 / 2.4 / 2.5 so the code is ready.
-3. Once Twilio approves the sender and templates, you share with me:
-   - the approved sender number
-   - the two content SIDs
-4. I update the secrets, and we run one real end-to-end test (QR complaint → owner gets WhatsApp template → owner replies → customer gets reply).
+The current `Send Request` action in **Customers** opens `wa.me/...` in a new tab and marks the customer as `requested`. The user expected it to send automatically — that requires approved Twilio templates which aren't ready yet.
 
----
-
-## Technical details (for reference)
-
-- Twilio API call shape for template send:
-  ```
-  POST /Messages.json
-  To=whatsapp:+91XXXXXXXXXX
-  From=whatsapp:+91YYYYYYYYYY
-  ContentSid=HXxxxxxxxx
-  ContentVariables={"1":"Ravi","2":"Service was slow"}
-  ```
-- 24-hour window check: `now() - complaints.last_inbound_at < interval '24 hours'` → freeform OK, else template required.
-- Error codes to special-case: `63016` (outside 24h window, no template), `63007` (sender not found), `63018` (template not approved).
+Changes (frontend only, no backend):
+- Rename the button label/tooltip from `Request` → `Open WhatsApp` with a small WhatsApp icon, and add a one-line helper under the table: "Tapping Open WhatsApp launches a pre-filled message — review and hit send in WhatsApp."
+- Detect popup blockers: if `window.open(...)` returns `null`, show a toast with a "Copy message" / "Copy link" fallback that copies the wa.me URL to the clipboard.
+- Only mark the customer `status = 'requested'` **after** the user confirms (button now toggles to "Mark as Sent" once the WhatsApp tab opens, OR auto-marks after 3s if not cancelled). Prevents false "requested" status when the WhatsApp tab fails to open.
+- Add a "Resend" affordance for customers already in `requested` status.
+- In **Settings → WhatsApp** tab, add a clearly-worded panel at the top:
+  > **Current mode: Manual (Click-to-chat)** — review requests and replies open WhatsApp pre-filled; you tap Send. To enable fully automated sending, complete the Twilio template approval checklist below.
+  Show a disabled "Enable automatic sending" button that will activate once template SIDs are configured (out of scope for this task).
 
 ---
 
-**Question before I start coding Part 2:** do you want me to proceed implementing 2.2–2.5 now (so it's ready when Twilio approves), or wait until the sender + templates are approved so we can test as we go? I recommend starting now.
+## 3. Complaint reply flow — make it work end-to-end
+
+Today: customer files a complaint via the web form (QR page). No WhatsApp contact has happened, so `last_inbound_at` is null. When the owner clicks Send in `ComplaintThread`, `send-whatsapp` requires a Twilio template (not approved) → message fails.
+
+Changes (frontend only):
+- `ComplaintThread.tsx`: if the complaint has no `last_inbound_at` (or messages array contains no inbound message yet), replace the in-dialog text composer with a prominent **"Open WhatsApp to reply"** button that:
+  - Uses customer's stored phone (already E.164).
+  - Opens `wa.me/<phone>?text=<urlencoded apology template>` (template comes from Settings → Apology template).
+  - After it opens, prompts the owner to optionally log what was said: a textarea + "Save to thread" button that writes an outbound row via existing flow but marked `channel = 'whatsapp_manual'` (we'll store a marker in `body` or `status`, no schema change required — store as `status = 'manual_logged'`).
+- Once the customer has replied at least once via WhatsApp (inbound message exists, set by `whatsapp-webhook`), the in-app composer becomes available again — that path already works.
+- Show a small badge in the dialog header: "WhatsApp not connected yet — opens in your phone/desktop WhatsApp" so the owner understands the current mode.
+- Keep failure UI from previous iteration (delivery failed badge) for when automatic sending is enabled later.
+
+---
+
+## 4. Touched files
+
+```text
+new:      src/components/PhoneInput.tsx
+edited:   src/pages/CustomersPage.tsx       (PhoneInput + send flow rework)
+edited:   src/pages/SettingsPage.tsx        (PhoneInput + WhatsApp mode banner)
+edited:   src/pages/QRRoutingPage.tsx       (PhoneInput, remove normalizePhone)
+edited:   src/pages/OnboardingPage.tsx      (PhoneInput for manager phone if present)
+edited:   src/components/ComplaintThread.tsx (click-to-chat reply mode when no inbound yet)
+package:  add libphonenumber-js
+```
+
+No database migration, no edge-function changes, no secrets needed.
+
+---
+
+## Out of scope (do later when Twilio templates are approved)
+
+- Switching `send-whatsapp` calls back on automatically.
+- Storing per-business sender number and Content SIDs in DB / Settings UI.
+- Outbound delivery-status webhook wiring.
