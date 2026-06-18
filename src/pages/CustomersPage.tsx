@@ -193,14 +193,42 @@ const CustomersPage = () => {
                       {new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => sendRequest.mutate(c)} disabled={sendRequest.isPending}>
-                        {c.status === "requested" ? (
-                          <><RotateCw className="mr-1.5 h-3.5 w-3.5" /> Resend</>
-                        ) : (
-                          <><Send className="mr-1.5 h-3.5 w-3.5" /> Open WhatsApp</>
-                        )}
-                      </Button>
+                      {(() => {
+                        const wa = buildWaForCustomer(c);
+                        if (!wa) {
+                          return (
+                            <span className="text-xs text-destructive">Add country code to phone</span>
+                          );
+                        }
+                        return (
+                          <div className="inline-flex items-center gap-1">
+                            <Button asChild variant="ghost" size="sm">
+                              <a
+                                href={wa.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => markRequested(c.id)}
+                              >
+                                {c.status === "requested" ? (
+                                  <><RotateCw className="mr-1.5 h-3.5 w-3.5" /> Resend</>
+                                ) : (
+                                  <><Send className="mr-1.5 h-3.5 w-3.5" /> Open WhatsApp</>
+                                )}
+                              </a>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Copy WhatsApp link"
+                              onClick={() => copyWaLink(wa.url)}
+                            >
+                              Copy
+                            </Button>
+                          </div>
+                        );
+                      })()}
                     </TableCell>
+
 
                   </TableRow>
                 ))}
