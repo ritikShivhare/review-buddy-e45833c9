@@ -1,84 +1,47 @@
+## Root cause
 
-## Goals
+Both the **Open WhatsApp** button on Customers and the **Open WhatsApp to reply** button in the complaint chat use `window.open(url, "_blank")`. Inside the Lovable preview iframe (and on many mobile browsers when a button click goes through async code like a mutation), the browser blocks that call and returns `null`, which surfaces as the *"Popup blocked / error"* you're seeing. Twilio is not actually involved in this manual flow — nothing is broken on the backend.
 
-1. Every phone input gets a country-code dropdown with full country list, defaulting to **+91 (India)** but auto-detecting from browser locale/timezone when possible. User can change at any time.
-2. Fix the broken "send review request" + "reply to complaint" experience by making it explicit and reliable via WhatsApp click-to-chat (wa.me), with clear UI state and an easy switch to automated Twilio template sends later.
-3. No database schema changes. Phone numbers continue to be stored in E.164 format (`+<countrycode><number>`).
+The complaint chat itself only exposes the in‑app composer once the customer has sent an inbound WhatsApp message (`hasInbound`). Until then the only action is that same blocked popup, so the chat feels "not working".
 
----
+## Fix plan
 
-## 1. Country-code picker component
+### 1. Replace `window.open` with real anchor links (works inside iframes & mobile)
 
-Create `src/components/PhoneInput.tsx` — a reusable controlled input that returns a full E.164 string (e.g. `+919876543210`).
+**`src/pages/CustomersPage.tsx`**
+- Remove the `sendRequest` mutation's `window.open` call.
+- Render the action cell as an `<a href={waUrl} target="_blank" rel="noopener noreferrer">` styled as the existing Button (using `asChild`). Anchor navigations are user‑gesture safe and are not popup‑blocked.
+- On click of the anchor, fire a lightweight `onClick` that updates the customer's `status` to `requested` (no await before navigation).
+- Keep a "Copy link" secondary action (icon button) as a fallback for environments where the new tab still fails.
+- Keep the existing toast "WhatsApp opened — tap Send in WhatsApp to deliver" but only show it after the click.
 
-- Library: install `libphonenumber-js` (small, no native deps) for validation + parsing + country metadata.
-- UI: shadcn `Popover` + `Command` (searchable) on the left, native `Input` on the right. Shows flag emoji + dial code (e.g. 🇮🇳 +91). Search by country name or dial code.
-- Auto-detect default country:
-  1. If a value is already passed in, parse it and use that country.
-  2. Else try `Intl.DateTimeFormat().resolvedOptions().timeZone` → map common Asia/Kolkata, Asia/Dubai, America/*, Europe/* etc. to ISO codes.
-  3. Else `navigator.language` region.
-  4. Fallback: `IN`.
-- Validation: live check via `isValidPhoneNumber`; show inline error.
-- Props: `value`, `onChange(e164 | "")`, `onValidChange?(boolean)`, `defaultCountry?`.
+**`src/components/ComplaintThread.tsx`**
+- Convert the "Open WhatsApp to reply" Button to a `Button asChild` wrapping an `<a target="_blank" rel="noopener noreferrer" href={waUrl}>`.
+- Compute `waUrl` synchronously from `complaint.customer_phone` + `buildApology()` so the href is ready at render time.
+- Add a small "Copy message" + "Copy link" pair underneath as fallback.
+- Show a clear inline error chip if `customer_phone` is missing or too short, instead of only a toast on click.
 
-Replace existing hardcoded "+91" prefix UI in:
-- `src/pages/CustomersPage.tsx` (Add Customer dialog).
-- `src/pages/SettingsPage.tsx` (Manager Phone field — Business Info tab).
-- `src/pages/QRRoutingPage.tsx` (customer complaint form).
-- `src/pages/OnboardingPage.tsx` (if it asks for manager phone — to be confirmed when editing).
+### 2. Make the chat actually usable before any inbound message
 
-The `normalizePhone` helpers in `QRRoutingPage` and `CustomersPage` will be removed in favor of the already-E.164 value coming from `PhoneInput`.
+Currently the in‑app composer is hidden until `hasInbound` is true. Since Twilio template sending isn't live yet, that path never sends anyway — so the composer should always be visible for **logging** what was said:
 
----
+- Always render the textarea + a primary "Save reply to thread" button (manual log, `status: 'manual_logged'`), regardless of `hasInbound`.
+- Keep "Open WhatsApp to reply" above it as the recommended action when `!hasInbound`.
+- Only show the auto‑send Send button (calls `send-whatsapp` edge function) when `hasInbound` is true, with a tooltip explaining why it's disabled otherwise.
+- Keep the "Manual mode" badge.
 
-## 2. Review-request "send" flow — make click-to-chat explicit & reliable
+### 3. Phone-number sanity
 
-The current `Send Request` action in **Customers** opens `wa.me/...` in a new tab and marks the customer as `requested`. The user expected it to send automatically — that requires approved Twilio templates which aren't ready yet.
+Some older customer rows may have been saved before `PhoneInput` enforced E.164. Add a guard:
+- In both buttons, if the stored phone doesn't start with `+` or fails `isValidPhoneNumber`, show "Phone number missing country code — edit the customer to fix" instead of opening a broken `wa.me` link.
 
-Changes (frontend only, no backend):
-- Rename the button label/tooltip from `Request` → `Open WhatsApp` with a small WhatsApp icon, and add a one-line helper under the table: "Tapping Open WhatsApp launches a pre-filled message — review and hit send in WhatsApp."
-- Detect popup blockers: if `window.open(...)` returns `null`, show a toast with a "Copy message" / "Copy link" fallback that copies the wa.me URL to the clipboard.
-- Only mark the customer `status = 'requested'` **after** the user confirms (button now toggles to "Mark as Sent" once the WhatsApp tab opens, OR auto-marks after 3s if not cancelled). Prevents false "requested" status when the WhatsApp tab fails to open.
-- Add a "Resend" affordance for customers already in `requested` status.
-- In **Settings → WhatsApp** tab, add a clearly-worded panel at the top:
-  > **Current mode: Manual (Click-to-chat)** — review requests and replies open WhatsApp pre-filled; you tap Send. To enable fully automated sending, complete the Twilio template approval checklist below.
-  Show a disabled "Enable automatic sending" button that will activate once template SIDs are configured (out of scope for this task).
+### Files touched
+- `src/pages/CustomersPage.tsx` — anchor-based Open WhatsApp, copy-link fallback, phone validity guard.
+- `src/components/ComplaintThread.tsx` — anchor-based reply link, always-on manual log composer, copy fallbacks, phone validity guard.
 
----
+### Out of scope
+- No Twilio/edge-function changes — automated sending stays disabled until templates are approved (per your earlier decision).
+- No DB schema changes.
 
-## 3. Complaint reply flow — make it work end-to-end
-
-Today: customer files a complaint via the web form (QR page). No WhatsApp contact has happened, so `last_inbound_at` is null. When the owner clicks Send in `ComplaintThread`, `send-whatsapp` requires a Twilio template (not approved) → message fails.
-
-Changes (frontend only):
-- `ComplaintThread.tsx`: if the complaint has no `last_inbound_at` (or messages array contains no inbound message yet), replace the in-dialog text composer with a prominent **"Open WhatsApp to reply"** button that:
-  - Uses customer's stored phone (already E.164).
-  - Opens `wa.me/<phone>?text=<urlencoded apology template>` (template comes from Settings → Apology template).
-  - After it opens, prompts the owner to optionally log what was said: a textarea + "Save to thread" button that writes an outbound row via existing flow but marked `channel = 'whatsapp_manual'` (we'll store a marker in `body` or `status`, no schema change required — store as `status = 'manual_logged'`).
-- Once the customer has replied at least once via WhatsApp (inbound message exists, set by `whatsapp-webhook`), the in-app composer becomes available again — that path already works.
-- Show a small badge in the dialog header: "WhatsApp not connected yet — opens in your phone/desktop WhatsApp" so the owner understands the current mode.
-- Keep failure UI from previous iteration (delivery failed badge) for when automatic sending is enabled later.
-
----
-
-## 4. Touched files
-
-```text
-new:      src/components/PhoneInput.tsx
-edited:   src/pages/CustomersPage.tsx       (PhoneInput + send flow rework)
-edited:   src/pages/SettingsPage.tsx        (PhoneInput + WhatsApp mode banner)
-edited:   src/pages/QRRoutingPage.tsx       (PhoneInput, remove normalizePhone)
-edited:   src/pages/OnboardingPage.tsx      (PhoneInput for manager phone if present)
-edited:   src/components/ComplaintThread.tsx (click-to-chat reply mode when no inbound yet)
-package:  add libphonenumber-js
-```
-
-No database migration, no edge-function changes, no secrets needed.
-
----
-
-## Out of scope (do later when Twilio templates are approved)
-
-- Switching `send-whatsapp` calls back on automatically.
-- Storing per-business sender number and Content SIDs in DB / Settings UI.
-- Outbound delivery-status webhook wiring.
+## Why this fixes it
+Anchor `target="_blank"` clicks are treated as direct user navigation, so the preview iframe and mobile browsers won't block them the way `window.open` is blocked. The complaint chat becomes useful immediately because you can always log replies, with the WhatsApp deep link one tap away.
