@@ -76,38 +76,39 @@ const CustomersPage = () => {
     },
   });
 
-  const sendRequest = useMutation({
-    mutationFn: async (customer: { id: string; name: string; phone: string }) => {
-      if (!business) throw new Error("No business");
-      // Phone is stored as E.164 (e.g. +919876543210). wa.me wants digits only, no +.
-      const phone = customer.phone.replace(/\D/g, "");
-      if (phone.length < 8) throw new Error("Customer phone is invalid");
-      const link = `${window.location.origin}/r/${business.id}`;
-      const msg = `Hi ${customer.name}, thanks for visiting ${business.business_name}! We'd love your feedback: ${link}`;
-      const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-      const win = window.open(url, "_blank", "noopener,noreferrer");
-      if (!win) {
-        await navigator.clipboard.writeText(url).catch(() => {});
-        throw new Error("POPUP_BLOCKED");
-      }
-      const { error } = await supabase
-        .from("customers")
-        .update({ status: "requested" })
-        .eq("id", customer.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
-      toast.success("WhatsApp opened — tap Send in WhatsApp to deliver the request");
-    },
-    onError: (err: any) => {
-      if (err.message === "POPUP_BLOCKED") {
-        toast.error("Popup blocked. WhatsApp link copied to clipboard — paste it in a new tab.");
-      } else {
-        toast.error(err.message);
-      }
-    },
-  });
+  const buildWaForCustomer = (customer: { name: string; phone: string }) => {
+    if (!business) return null;
+    const raw = customer.phone || "";
+    if (!raw.startsWith("+") || !isValidPhoneNumber(raw)) return null;
+    const phone = raw.replace(/\D/g, "");
+    if (phone.length < 8) return null;
+    const link = `${window.location.origin}/r/${business.id}`;
+    const msg = `Hi ${customer.name}, thanks for visiting ${business.business_name}! We'd love your feedback: ${link}`;
+    return { url: `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, msg, link };
+  };
+
+  const markRequested = async (customerId: string) => {
+    const { error } = await supabase
+      .from("customers")
+      .update({ status: "requested" })
+      .eq("id", customerId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["customers"] });
+    toast.success("WhatsApp opened — tap Send in WhatsApp to deliver the request");
+  };
+
+  const copyWaLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("WhatsApp link copied — paste it in a new tab");
+    } catch {
+      toast.error("Could not copy. Long-press the button to copy the link.");
+    }
+  };
+
 
   const filtered = customers.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
@@ -192,14 +193,42 @@ const CustomersPage = () => {
                       {new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => sendRequest.mutate(c)} disabled={sendRequest.isPending}>
-                        {c.status === "requested" ? (
-                          <><RotateCw className="mr-1.5 h-3.5 w-3.5" /> Resend</>
-                        ) : (
-                          <><Send className="mr-1.5 h-3.5 w-3.5" /> Open WhatsApp</>
-                        )}
-                      </Button>
+                      {(() => {
+                        const wa = buildWaForCustomer(c);
+                        if (!wa) {
+                          return (
+                            <span className="text-xs text-destructive">Add country code to phone</span>
+                          );
+                        }
+                        return (
+                          <div className="inline-flex items-center gap-1">
+                            <Button asChild variant="ghost" size="sm">
+                              <a
+                                href={wa.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => markRequested(c.id)}
+                              >
+                                {c.status === "requested" ? (
+                                  <><RotateCw className="mr-1.5 h-3.5 w-3.5" /> Resend</>
+                                ) : (
+                                  <><Send className="mr-1.5 h-3.5 w-3.5" /> Open WhatsApp</>
+                                )}
+                              </a>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Copy WhatsApp link"
+                              onClick={() => copyWaLink(wa.url)}
+                            >
+                              Copy
+                            </Button>
+                          </div>
+                        );
+                      })()}
                     </TableCell>
+
 
                   </TableRow>
                 ))}

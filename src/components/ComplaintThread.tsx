@@ -100,22 +100,19 @@ const ComplaintThread = ({ complaintId, open, onOpenChange, customerName }: Prop
     return parts.join("\n\n");
   };
 
-  const openWhatsAppReply = async () => {
-    const phone = (complaint?.customer_phone || "").replace(/\D/g, "");
-    if (!phone) {
-      toast.error("Customer phone is missing");
-      return;
+  const rawPhone = complaint?.customer_phone || "";
+  const phoneDigits = rawPhone.replace(/\D/g, "");
+  const phoneValid = rawPhone.startsWith("+") && phoneDigits.length >= 8;
+  const apologyMsg = buildApology();
+  const waUrl = phoneValid ? `https://wa.me/${phoneDigits}?text=${encodeURIComponent(apologyMsg)}` : "";
+
+  const copy = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("Could not copy");
     }
-    const msg = buildApology();
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-    const win = window.open(url, "_blank", "noopener,noreferrer");
-    if (!win) {
-      await navigator.clipboard.writeText(url).catch(() => {});
-      toast.error("Popup blocked. WhatsApp link copied to clipboard.");
-      return;
-    }
-    setText(msg);
-    toast.success("WhatsApp opened — review and tap Send there");
   };
 
   const logManualReply = async () => {
@@ -179,45 +176,61 @@ const ComplaintThread = ({ complaintId, open, onOpenChange, customerName }: Prop
             <div ref={endRef} />
           </div>
 
-          {!hasInbound ? (
-            <div className="mt-3 space-y-2">
+          <div className="mt-3 space-y-2">
+            {!hasInbound && (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-muted-foreground dark:border-amber-900/50 dark:bg-amber-950/30">
-                WhatsApp automation isn't active yet. Tap below to reply through your own WhatsApp; the customer's first WhatsApp reply will unlock in-app sending.
+                WhatsApp automation isn't active yet. Use "Open WhatsApp" to reply from your phone, then log what you sent below. The customer's first WhatsApp reply will unlock auto-sending.
               </div>
-              <Button onClick={openWhatsAppReply} className="w-full">
-                <ExternalLink className="mr-1.5 h-4 w-4" /> Open WhatsApp to reply
-              </Button>
-              <Textarea
-                rows={3}
-                placeholder="Optional: paste/log what you said so it shows in the thread…"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-              />
+            )}
+
+            {!phoneValid ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive">
+                Customer phone is missing or has no country code — cannot open WhatsApp.
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button asChild className="flex-1">
+                  <a href={waUrl} target="_blank" rel="noopener noreferrer" onClick={() => setText(apologyMsg)}>
+                    <ExternalLink className="mr-1.5 h-4 w-4" /> Open WhatsApp
+                  </a>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => copy(waUrl, "Link")}>
+                  Copy link
+                </Button>
+              </div>
+            )}
+
+            <Textarea
+              rows={3}
+              placeholder="Type or paste the reply you sent on WhatsApp…"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (hasInbound && e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send();
+                }
+              }}
+            />
+            <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full"
+                className="flex-1"
                 onClick={logManualReply}
                 disabled={logging || !text.trim()}
               >
                 {logging ? "Saving…" : "Save reply to thread"}
               </Button>
+              {hasInbound && (
+                <Button onClick={send} disabled={sending || !text.trim()} size="sm">
+                  <Send className="mr-1.5 h-4 w-4" /> Send
+                </Button>
+              )}
             </div>
-          ) : (
-            <div className="mt-3 flex gap-2">
-              <Textarea
-                rows={2}
-                placeholder="Type your reply…"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              />
-              <Button onClick={send} disabled={sending || !text.trim()} className="self-end">
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          </div>
         </div>
+
       </DialogContent>
     </Dialog>
   );
