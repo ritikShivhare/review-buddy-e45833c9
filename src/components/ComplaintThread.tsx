@@ -80,8 +80,9 @@ const ComplaintThread = ({ complaintId, open, onOpenChange, customerName }: Prop
       body: { complaint_id: complaintId, body: text.trim(), side: "owner" },
     });
     setSending(false);
-    if (error || (data && data.ok === false)) {
-      toast.error(data?.error || "Failed to send WhatsApp message");
+    const errMsg = (data && data.ok === false && data.error) || error?.message;
+    if (errMsg) {
+      toast.error(errMsg, { description: "Tip: use Open WhatsApp to reply from your phone if automation is blocked." });
       return;
     }
     setText("");
