@@ -87,17 +87,26 @@ const CustomersPage = () => {
     return { url: `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, msg, link };
   };
 
-  const markRequested = async (customerId: string) => {
-    const { error } = await supabase
-      .from("customers")
-      .update({ status: "requested" })
-      .eq("id", customerId);
-    if (error) {
-      toast.error(error.message);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
+  const sendReviewRequest = async (customer: { id: string; name: string; phone: string }) => {
+    setSendingId(customer.id);
+    const { data, error } = await supabase.functions.invoke("send-review-request", {
+      body: { customer_id: customer.id },
+    });
+    setSendingId(null);
+    const errMsg = (data && data.ok === false && (data.message || data.error)) || error?.message;
+    if (errMsg) {
+      const isTemplate = data?.error === "template_not_configured";
+      toast.error(isTemplate ? "Template approval pending" : errMsg, {
+        description: isTemplate
+          ? "Approve the WhatsApp template in Twilio, then it auto-sends. Meanwhile, use Open WhatsApp."
+          : "Tip: use Open WhatsApp to send manually.",
+      });
       return;
     }
     queryClient.invalidateQueries({ queryKey: ["customers"] });
-    toast.success("WhatsApp opened — tap Send in WhatsApp to deliver the request");
+    toast.success(`Review request sent to ${customer.name} ✓`);
   };
 
   const copyWaLink = async (url: string) => {
@@ -202,27 +211,24 @@ const CustomersPage = () => {
                         }
                         return (
                           <div className="inline-flex items-center gap-1">
-                            <Button asChild variant="ghost" size="sm">
-                              <a
-                                href={wa.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={() => markRequested(c.id)}
-                              >
-                                {c.status === "requested" ? (
-                                  <><RotateCw className="mr-1.5 h-3.5 w-3.5" /> Resend</>
-                                ) : (
-                                  <><Send className="mr-1.5 h-3.5 w-3.5" /> Open WhatsApp</>
-                                )}
-                              </a>
-                            </Button>
                             <Button
-                              variant="ghost"
+                              variant="default"
                               size="sm"
-                              title="Copy WhatsApp link"
-                              onClick={() => copyWaLink(wa.url)}
+                              onClick={() => sendReviewRequest(c)}
+                              disabled={sendingId === c.id}
                             >
-                              Copy
+                              {sendingId === c.id ? (
+                                <>Sending…</>
+                              ) : c.status === "requested" ? (
+                                <><RotateCw className="mr-1.5 h-3.5 w-3.5" /> Resend</>
+                              ) : (
+                                <><Send className="mr-1.5 h-3.5 w-3.5" /> Send via WhatsApp</>
+                              )}
+                            </Button>
+                            <Button asChild variant="ghost" size="sm" title="Open WhatsApp manually">
+                              <a href={wa.url} target="_blank" rel="noopener noreferrer">
+                                Manual
+                              </a>
                             </Button>
                           </div>
                         );
