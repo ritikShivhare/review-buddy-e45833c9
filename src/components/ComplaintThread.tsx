@@ -223,11 +223,9 @@ const ComplaintThread = ({ complaintId, open, onOpenChange, customerName }: Prop
               >
                 {logging ? "Saving…" : "Save reply to thread"}
               </Button>
-              {hasInbound && (
-                <Button onClick={send} disabled={sending || !text.trim()} size="sm">
-                  <Send className="mr-1.5 h-4 w-4" /> Send
-                </Button>
-              )}
+              <Button onClick={send} disabled={sending || !text.trim()} size="sm">
+                <Send className="mr-1.5 h-4 w-4" /> {sending ? "Sending…" : "Send"}
+              </Button>
             </div>
           </div>
         </div>
