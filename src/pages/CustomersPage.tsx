@@ -211,27 +211,24 @@ const CustomersPage = () => {
                         }
                         return (
                           <div className="inline-flex items-center gap-1">
-                            <Button asChild variant="ghost" size="sm">
-                              <a
-                                href={wa.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={() => markRequested(c.id)}
-                              >
-                                {c.status === "requested" ? (
-                                  <><RotateCw className="mr-1.5 h-3.5 w-3.5" /> Resend</>
-                                ) : (
-                                  <><Send className="mr-1.5 h-3.5 w-3.5" /> Open WhatsApp</>
-                                )}
-                              </a>
-                            </Button>
                             <Button
-                              variant="ghost"
+                              variant="default"
                               size="sm"
-                              title="Copy WhatsApp link"
-                              onClick={() => copyWaLink(wa.url)}
+                              onClick={() => sendReviewRequest(c)}
+                              disabled={sendingId === c.id}
                             >
-                              Copy
+                              {sendingId === c.id ? (
+                                <>Sending…</>
+                              ) : c.status === "requested" ? (
+                                <><RotateCw className="mr-1.5 h-3.5 w-3.5" /> Resend</>
+                              ) : (
+                                <><Send className="mr-1.5 h-3.5 w-3.5" /> Send via WhatsApp</>
+                              )}
+                            </Button>
+                            <Button asChild variant="ghost" size="sm" title="Open WhatsApp manually">
+                              <a href={wa.url} target="_blank" rel="noopener noreferrer">
+                                Manual
+                              </a>
                             </Button>
                           </div>
                         );
