@@ -1,42 +1,70 @@
-## What is happening
+## Goal
+Customers aur Complaints dono jagah se WhatsApp message **backend Twilio se directly** chala jaye — user ke phone me WhatsApp open karne ki zaroorat nahi, aur "number not saved" wala issue khatam.
 
-There are two different WhatsApp paths:
+## Important: WhatsApp ka rule (read first)
+WhatsApp business policy ke according, jab business **first message** kisi customer ko bhejta hai (ya customer ne pichhle 24 ghante me reply nahi kiya), to **sirf approved Template message** hi bhej sakte ho — freeform text WhatsApp reject kar dega (Twilio error 63016).
 
-1. **Customers page → Open WhatsApp**
-   - This uses a `wa.me` link only.
-   - It does not send automatically; WhatsApp opens with a pre-filled message and you must tap **Send** inside WhatsApp.
-   - It can fail if the phone is not stored with a country code like `+91...`, or if the preview/browser blocks opening the external app.
+Iska matlab:
+- **Backend code main bana sakta hu aaj hi.**
+- Lekin actual sending tab kaam karegi jab aap Twilio Console me 2 templates approve karwa lo (~1–24 ghante Meta approval) aur unke Content SIDs secrets me daal do.
+- Jab tak template approved nahi, app saaf-saaf bata degi *"Template approval pending — meanwhile use Open WhatsApp"*.
 
-2. **Complaints chat → Send**
-   - This uses the backend `send-whatsapp` function through Twilio.
-   - The current code only sends automatically after the customer has replied on WhatsApp within the 24-hour WhatsApp window.
-   - If there is no inbound WhatsApp reply yet and no approved Twilio template configured, the message cannot be sent by WhatsApp rules.
+## Templates jo aapko Twilio Console → Content Template Builder me banane honge
 
-I also checked recent backend logs and there were **no recent calls** to `send-whatsapp` or `whatsapp-webhook`, which means the broken action is likely not reaching the backend yet, and the current issue is mostly the frontend link/send flow plus WhatsApp 24-hour/template rules.
+1. **Review request** (Customers page se bheja jata hai)
+   - Category: **Marketing** (ya Utility agar transactional justify ho)
+   - Example body:
+     `Hi {{1}}, thanks for visiting {{2}}! We'd love your feedback — please share your experience here: {{3}}`
+   - Variables: `1`=customer name, `2`=business name, `3`=review link
+   - Approve hone ke baad Content SID milega (`HX...`) → secret `TWILIO_TEMPLATE_REVIEW_REQUEST_SID` me daalna hai.
 
-## Plan to fix
+2. **Complaint apology** (Complaints chat se owner ka first reply)
+   - Category: **Utility**
+   - Example body:
+     `Hi {{1}}, this is {{2}}. We're sorry about your recent experience. {{3}}`
+   - Variables: `1`=customer name, `2`=business name, `3`=owner ka message
+   - Secret name: `TWILIO_TEMPLATE_CUSTOMER_ACK_SID` (yeh already code me referenced hai).
 
-1. **Make Open WhatsApp more reliable**
-   - Update both customer request and complaint chat buttons to use the safest WhatsApp URL format.
-   - Use normal clickable links with `target="_blank"` and keep the copy-link fallback.
-   - Improve phone normalization so valid Indian numbers and international numbers work consistently.
+## App-side changes
 
-2. **Make complaint chat behavior clear and functional**
-   - In the complaint dialog, keep **Open WhatsApp** for manual chat when automation is not available.
-   - Only show automatic **Send** when Twilio can legally send: customer has replied within the 24-hour window, or an approved template is configured.
-   - Show the real reason when automatic send is blocked: “customer has not replied yet / approved template missing”.
+### 1. New edge function `send-review-request`
+- Input: `customer_id`
+- Auth check (business owner only).
+- Customer ka phone normalize karke Twilio gateway pe POST `/Messages.json`:
+  - Agar `TWILIO_TEMPLATE_REVIEW_REQUEST_SID` set hai → `ContentSid` + `ContentVariables` se send.
+  - Warna → return `{ ok: false, error: "Template not configured" }` (no freeform attempt, kyunki fail hi hoga).
+- Success pe `customers.status` ko `requested` mark kare aur `last_sent_at` update kare.
+- Failure pe Twilio ka actual error message return kare.
 
-3. **Verify Twilio backend function path**
-   - Check `send-whatsapp` invocation from the app.
-   - If needed, deploy/redeploy the WhatsApp edge functions.
-   - Test the function directly with an existing complaint after the UI fix, using the current logged-in session.
+### 2. Update `src/pages/CustomersPage.tsx`
+- "Open WhatsApp" button ko **"Send via WhatsApp"** se replace karo, jo `send-review-request` invoke kare.
+- Sending state, success toast (*"Review request sent ✓"*), failure pe Twilio error dikhao.
+- Ek small **"Open WhatsApp manually"** secondary link rakho fallback ke liye (jab tak template approve nahi).
+- Agar function `template_not_configured` error de, toast me clear message: *"Twilio template approve pending. Aap manual WhatsApp se bhej sakte ho."*
 
-4. **Add better error handling**
-   - If WhatsApp cannot open, users can copy the exact link.
-   - If Twilio send fails, show the Twilio/backend error instead of a generic failure.
+### 3. Update `src/components/ComplaintThread.tsx`
+- `send` function pehle se `send-whatsapp` invoke karta hai — woh already template route handle karta hai. Bas UI me:
+  - "Send" button hamesha dikhao (na sirf `hasInbound` pe), kyunki ab outside-24h bhi template se ja sakta hai.
+  - Disabled state + tooltip agar template missing: *"Approve customer-ack template in Twilio to enable auto-send."*
+
+### 4. Settings page me chhota status indicator (optional, helpful)
+- Settings me ek "WhatsApp setup" card:
+  - ✓ Twilio connected
+  - ✓ / ✗ Review request template configured
+  - ✓ / ✗ Complaint apology template configured
+- Yeh `fetch_secrets` ki jagah ek edge function endpoint `whatsapp-status` se aayega jo bas `boolean` return kare (no secret values exposed).
+
+## Aapko kya karna padega (one-time)
+1. Twilio Console → Messaging → Content Template Builder me upar diye 2 templates banao aur approve karao (Meta review).
+2. Approved hone par Content SIDs (`HXxxxxxxxx...`) copy karke mujhe do — main secrets me add kar dunga (`TWILIO_TEMPLATE_REVIEW_REQUEST_SID` aur `TWILIO_TEMPLATE_CUSTOMER_ACK_SID`).
+3. Bas — uske baad har button click pe message Twilio se directly chala jayega, customer ke phone pe "number not saved" warning dikhega hi nahi kyunki aap apne phone se kuch nahi kar rahe.
 
 ## Expected result
+- **Customers → Send via WhatsApp:** ek click → message Twilio se customer ko deliver, status `requested` mark.
+- **Complaints → Send:** ek click → reply Twilio se customer ko deliver, thread me `sent` badge.
+- Template missing/pending ho to UI saaf-saaf bataye aur manual fallback offer kare — koi silent failure nahi.
 
-- From **Customers**, Open WhatsApp opens a pre-filled review request for the customer.
-- From **Complaints**, Open WhatsApp opens a pre-filled apology/reply chat.
-- Automatic in-app sending works only when WhatsApp/Twilio rules allow it, and otherwise the app clearly tells you what is missing.
+## Non-goals
+- SMS fallback (alag request hai).
+- vCard / save contact button (alag request hai).
+- WhatsApp Business API onboarding ka aur koi part — Twilio aur number already verified hai.
